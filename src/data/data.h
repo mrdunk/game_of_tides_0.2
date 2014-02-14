@@ -16,14 +16,18 @@
 
 #define MAP_NUM_POINTS  1000//0//0
 #define MAP_SIZE        1000000
-#define MAP_MIN_RES     1//0.01
+#define MAP_MIN_RES     0.01f
 
-#define TYPE_SITE   false
-#define TYPE_VPOINT true
+#define TYPE_SITE       0
+#define TYPE_VPOINT     1
+#define TYPE_UNDEFINED  -1
 
-#define TERRAIN_SEA  0
-#define TERRAIN_LAND 1
-#define TERRAIN_SHORE 2
+#define RECURSE     3
+
+#define TERRAIN_UNDEFINED   0
+#define TERRAIN_OCEAN       1
+#define TERRAIN_SHORE       2
+#define TERRAIN_LAND        3
 
 void KeyToCoord(const int64_t key, float& x, float& y);
 bool pointInsideTriangle(float px, float py, float c1x, float c1y, float c2x, float c2y, float c3x, float c3y);
@@ -45,17 +49,18 @@ class CompCoord {
 class MapSite{
     public:
         int type;       // TYPE_SITE or TYPE_VPOINT
-        int terrain;    // TERRAIN_SEA, TERRAIN_LAND or TERRAIN_SHORE
         int recDepth;   // This element created at this recursion level.
         float x;
         float y;
         float height;
+        int terrain;
         MapSite(void){
+            type = TYPE_UNDEFINED;
             x = 0;
             y = 0;
-            height = 0;
-            terrain = TERRAIN_LAND;
+            height = -1;
             recDepth = 0;
+            terrain = TERRAIN_UNDEFINED;
         }
 
         unsigned int recursionSize(void){
@@ -64,11 +69,8 @@ class MapSite{
 
         bool isShore(unsigned int recursion, std::unordered_map<int64_t, struct MapSite> &MapContainer){
             for(auto it = site_begin(recursion); it != site_end(recursion); ++it){
-                //if(MapContainer[*it].height < 0 and height >= 0) return true;
+                if(MapContainer[*it].height < 0 and height >= 0) return true;
                 //if(MapContainer[*it].height >= 0 and height < 0) return true;
-                if(terrain > TERRAIN_SEA and MapContainer[*it].terrain == TERRAIN_SEA){
-                    return true;
-                }
             }
             return false;
         }
@@ -131,21 +133,22 @@ class MapSite{
         }
 
         void push_corner(unsigned int recursion, int64_t s){
+            //cout << "push_corner(" << recursion << ", " << s << ")\n";
             CompCoord::PassParentCoord(x, y);
             if(recursion >= corner.size()){
+                //cout << corner.size() << "\n";
                 std::set<int64_t, CompCoord> empty;
                 empty.clear();
 
                 while(recursion >= corner.size()){
                     corner.push_back(empty);
                 }
-                corner.push_back(empty);
             }
             corner[recursion].insert(s);
         }
 
         std::set<int64_t, CompCoord>::iterator site_begin(unsigned int recursion){
-            if(recursion > site.size() -1){
+            if(recursion >= site.size()){
                 recursion = site.size() -1;
             }
             CompCoord::PassParentCoord(x, y);
@@ -153,7 +156,7 @@ class MapSite{
         }
 
         std::set<int64_t, CompCoord>::iterator corner_begin(unsigned int recursion){
-            if(recursion > corner.size() -1){
+            if(recursion >= corner.size()){
                 recursion = corner.size() -1;
             }
             CompCoord::PassParentCoord(x, y);
@@ -161,7 +164,7 @@ class MapSite{
         }
 
         std::set<int64_t, CompCoord>::iterator site_end(unsigned int recursion){
-            if(recursion > site.size() -1){
+            if(recursion >= site.size()){
                 recursion = site.size() -1;
             }
             CompCoord::PassParentCoord(x, y);
@@ -169,7 +172,7 @@ class MapSite{
         }
 
         std::set<int64_t, CompCoord>::iterator corner_end(unsigned int recursion){
-            if(recursion > corner.size() -1){
+            if(recursion >= corner.size()){
                 recursion = corner.size() -1;
             }
             CompCoord::PassParentCoord(x, y);
@@ -178,18 +181,16 @@ class MapSite{
 
         // Coordinates rounded to nearest MAP_MIN_RES
         int64_t coord(void){
-            int32_t xx = round(x / MAP_MIN_RES);
-            int32_t yy = round(y / MAP_MIN_RES);
+            int32_t xx = round(x / (float)MAP_MIN_RES);
+            int32_t yy = round(y / (float)MAP_MIN_RES);
             int64_t c;
             c = (int64_t)yy << 32 | (int64_t)xx;
             return c;
         }
 
     private:
-        
         std::vector<std::set<int64_t, CompCoord> > site;
         std::vector<std::set<int64_t, CompCoord> > corner;
-
 };
 
 
@@ -206,12 +207,17 @@ class Data {
         // Key to the entry closest to the map centre.
         int64_t centre;
 
+        // Key to  entry closest to the 0,0 coordinate.
+        int64_t zero;
+
         void RaiseLand(std::unordered_set<int64_t>& open);
-        void DefineShore(std::unordered_set<int64_t>& open, std::unordered_set<int64_t>& shore);
         void SetHeight(std::unordered_set<int64_t>& open);
-        void MoreDetail(std::unordered_set<int64_t> shore, std::unordered_set<int64_t>& newPoints);
-        void ErodeShore(void);
-        std::unordered_set<int64_t> GetShore(void);
+        void MoreDetail(int recursion, std::unordered_set<int64_t> shore, std::unordered_set<int64_t>& newPoints);
+        void ErodeShore(int recursion);
+        std::unordered_set<int64_t> GetShore(int recursion);
+        std::unordered_set<int64_t> DefineShore(void);
+        void Section(float lowX, float lowY, float highX, float highY);
+        void TestData(void);
     private:
 
 };

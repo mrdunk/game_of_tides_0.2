@@ -28,7 +28,7 @@ void GameState::enter()
     OgreFramework::getSingletonPtr()->m_pLog->logMessage("Entering GameState...");
 
     m_pSceneMgr = OgreFramework::getSingletonPtr()->m_pRoot->createSceneManager(ST_GENERIC, "GameSceneMgr");
-    m_pSceneMgr->setAmbientLight(Ogre::ColourValue(0.7f, 0.7f, 0.7f));
+    //m_pSceneMgr->setAmbientLight(Ogre::ColourValue(0.7f, 0.7f, 0.7f));
 
     m_pSceneMgr->addRenderQueueListener(OgreFramework::getSingletonPtr()->m_pOverlaySystem);
 
@@ -61,9 +61,8 @@ void GameState::enter()
 
     buildGUI();
 
-    Data data;
 
-    createScene(data);
+    createScene();
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
@@ -101,7 +100,7 @@ void GameState::exit()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::createScene(Data& data)
+void GameState::createScene()
 {
     Ogre::Light* directionalLight = m_pSceneMgr->createLight("Light");
     directionalLight->setType(Ogre::Light::LT_DIRECTIONAL);
@@ -117,7 +116,7 @@ void GameState::createScene(Data& data)
     
     ManualObject* manual_planes = m_pSceneMgr->createManualObject("MapPoly");
     ManualObject* manual_lines = m_pSceneMgr->createManualObject("MapLine");
-    generateScenery(data, manual_planes, manual_lines);
+    generateScenery(manual_planes, manual_lines);
    
     manual_planes->convertToMesh("test.mesh.planes");
     Entity *ent1 = m_pSceneMgr->createEntity("planes", "test.mesh.planes");
@@ -166,15 +165,17 @@ void GameState::initMaterial(void){
     matptr->getTechnique(0)->getPass(0)->setVertexColourTracking(Ogre::TVC_DIFFUSE);   
 }
 
-void GameState::generateScenery(Data& data, ManualObject* manual_planes, ManualObject* manual_lines){
+void GameState::generateScenery(ManualObject* manual_planes, ManualObject* manual_lines){
     manual_planes->begin("SolidColour", RenderOperation::OT_TRIANGLE_LIST);
     manual_lines->begin("SolidColour", Ogre::RenderOperation::OT_LINE_LIST);
+
+    //drawLine(manual_lines, Ogre::Vector3(0, 2000, 0), Ogre::Vector3(MAP_SIZE/2, 2000, MAP_SIZE/2));
 
     for (auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
         if(it->second.type == TYPE_SITE){
             // Only do this stuff for sites. (We'd get it twice if we did it for corners as well.)
 
-            drawHill(data, manual_planes, manual_lines, &(it->second));
+            drawHill(manual_planes, manual_lines, &(it->second));
         }
     }
     std::cout << "done drawHill\n";
@@ -183,20 +184,25 @@ void GameState::generateScenery(Data& data, ManualObject* manual_planes, ManualO
 }
 
 
-Ogre::ColourValue GameState::colour(int height, int terrain){
-    //if(height >= 0){
-    if( terrain > TERRAIN_SEA){
-        height = height * 1000 / MAP_SIZE;
-        return Ogre::ColourValue((float)height / 50.0, 0.8 / (height +1), 0);  // green
+Ogre::ColourValue GameState::colour(int cornerHeight, int terrain){
+    if(terrain >= TERRAIN_LAND or terrain == TERRAIN_UNDEFINED){
+        cornerHeight = cornerHeight * 1000 / MAP_SIZE;
+        if(cornerHeight <= 0) cornerHeight = 1;
+        return Ogre::ColourValue((float)cornerHeight / 50.0, 0.8 / cornerHeight, 0);  // green
+    } else if(terrain == TERRAIN_SHORE){
+        cornerHeight = cornerHeight * 1000 / MAP_SIZE;
+        return Ogre::ColourValue(0.5, 0, 0);
     }
     return Ogre::ColourValue(0, 0.1, 0.4);  // blue
 }
 
 
-void GameState::drawHill(Data& data, Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapSite* centre){
+void GameState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapSite* centre){
     if(centre->x < 0 or centre->y < 0 or centre->x > MAP_SIZE or centre->y > MAP_SIZE) return;
+    if(centre->num_corners(RECURSE) == 0) return;
     static int vertexCount = 0;
     //if(vertexCount > 0) return;
+    //if(vertexCount > 1000000) return;
 
     MapSite current_corner = {};
     Ogre::Vector3 current_corner_v(0,0,0);
@@ -206,29 +212,33 @@ void GameState::drawHill(Data& data, Ogre::ManualObject* manual_planes, Ogre::Ma
 
     // http://www.ogre3d.org/forums/viewtopic.php?t=43030
     Ogre::Vector3 edge_a(centre->x, centre->height, centre->y);
-    if(centre->height < 0) edge_a.y = -1;
+    if(centre->height <= 0) edge_a.y = 0;
     manual_planes->position(edge_a);
     manual_planes->colour(colour(centre->height, centre->terrain));
     manual_planes->normal(0,1,0);
     
     int cornerCount = 0;
-    int recursion = 1;
-    //if(centre->terrain == TERRAIN_SHORE or centre->recDepth == 1) recursion = 1;
+    int recursion = RECURSE;
     for (auto corner_it = centre->corner_begin(recursion); corner_it != centre->corner_end(recursion); ++corner_it){
         current_corner = data.MapContainer[*corner_it];
+        float x, y;
+        KeyToCoord(current_corner.coord(), x, y);
+        if(fabs(current_corner.x - x) > MAP_MIN_RES *10 or fabs(current_corner.y - y) > MAP_MIN_RES *10){
+            cout << "baws!\n";
+            current_corner.x = -1; // < MAP_MIN_RES will prevent this one from being drawn.
+        }
         current_corner_v = Ogre::Vector3(current_corner.x, 0, current_corner.y);
 
-        if(current_corner_v.x > 0 and current_corner_v.z > 0 and current_corner_v.x < MAP_SIZE and current_corner_v.z < MAP_SIZE){
-
+        if(current_corner_v.x > MAP_MIN_RES and current_corner_v.z > MAP_MIN_RES and current_corner_v.x < MAP_SIZE and current_corner_v.z < MAP_SIZE){
             // height is the average of all adgacent sites.
             int height = 0, heightCount = 0;
             for (auto adgSite_it = current_corner.site_begin(recursion); adgSite_it != current_corner.site_end(recursion); ++adgSite_it){
                 height += data.MapContainer[*adgSite_it].height;
                 ++heightCount;
             }
-            height /= heightCount;
+            if(heightCount > 0) height /= heightCount;
             if(height >= 0) current_corner_v.y = height;
-            else current_corner_v.y = -1;
+            else current_corner_v.y = 0;
 
             // calculate normal for this point.
             Ogre::Vector3 dir0 = edge_a - current_corner_v;
@@ -261,8 +271,41 @@ void GameState::drawHill(Data& data, Ogre::ManualObject* manual_planes, Ogre::Ma
 
 
 void GameState::drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
-    mo->position(Ogre::Vector3(pointA.x, 1000, pointA.z));
-    mo->position(Ogre::Vector3(pointB.x, 1000, pointB.z));
+    mo->position(Ogre::Vector3(pointA.x, 10000, pointA.z));
+    mo->position(Ogre::Vector3(pointB.x, 10000, pointB.z));
+}
+
+
+void GameState::calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY){
+    // This plane sits 1/10th of the way from the camera to the surface because the full distance is out of range of the getCameraToViewportRay calculations.
+    Plane worldPlane(Ogre::Vector3::UNIT_Y, 900 * Ogre::Vector3(0,m_pCamera->getPosition().y / 1000 ,0));
+
+    Ogre::Ray rayCentre, rayTL, rayBR;
+    m_pCamera->getCameraToViewportRay(0.5, 0.5, &rayCentre);
+    m_pCamera->getCameraToViewportRay(0, 1, &rayTL);
+    m_pCamera->getCameraToViewportRay(1, 0, &rayBR);
+
+    std::pair<bool, Ogre::Real > resultCentre, resultTL, resultBR;
+    resultCentre = rayCentre.intersects(worldPlane);
+    resultTL = rayTL.intersects(worldPlane);
+    resultBR = rayBR.intersects(worldPlane);
+
+
+    if(resultCentre.first and resultTL.first and resultBR.first){
+        //we intersect with the plane
+        Ogre::Vector3 pCentre = rayCentre.getPoint(resultCentre.second);
+        Ogre::Vector3 pTL = rayTL.getPoint(resultTL.second);
+        Ogre::Vector3 pBR = rayBR.getPoint(resultBR.second);
+        lowX = pCentre.x + ((pTL.x - pCentre.x) *10);
+        lowY = pCentre.z + ((pTL.z - pCentre.z) *10);
+        highX = pCentre.x + ((pBR.x - pCentre.x) *10);
+        highY = pCentre.z + ((pBR.z - pCentre.z) *10);
+        std::cout << "centre:\n";
+        std::cout << pCentre.x << "\t\t" << pCentre.z << "\n";
+        //std::cout << (int)lowX << "\t\t" << (int)lowY << "\n";
+        //std::cout << (int)highX << "\t\t" << (int)highY << "\n\n";
+    }
+
 }
 
 
@@ -317,7 +360,7 @@ bool GameState::keyPressed(const OIS::KeyEvent &keyEventRef)
     }
 
     if((m_bSettingsMode && OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_RETURN)) ||
-        OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_NUMPADENTER))
+            OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_NUMPADENTER))
     {
     }
 
@@ -331,6 +374,9 @@ bool GameState::keyPressed(const OIS::KeyEvent &keyEventRef)
         rot2.FromAngleAxis(Ogre::Degree(-90), Ogre::Vector3::UNIT_Z);
 
         m_pCamera->setOrientation(rot1 * rot2);
+        float lowX, lowY, highX, highY;
+        calculateViewedMap(lowX, lowY, highX, highY);
+        data.Section(lowX, lowY, highX, highY);
     }
 
     if(!m_bSettingsMode || (m_bSettingsMode && !OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_O)))
@@ -509,12 +555,12 @@ void GameState::itemSelected(OgreBites::SelectMenu* menu)
 {
     switch(menu->getSelectionIndex())
     {
-    case 0:
-        m_pCamera->setPolygonMode(Ogre::PM_SOLID);break;
-    case 1:
-        m_pCamera->setPolygonMode(Ogre::PM_WIREFRAME);break;
-    case 2:
-        m_pCamera->setPolygonMode(Ogre::PM_POINTS);break;
+        case 0:
+            m_pCamera->setPolygonMode(Ogre::PM_SOLID);break;
+        case 1:
+            m_pCamera->setPolygonMode(Ogre::PM_WIREFRAME);break;
+        case 2:
+            m_pCamera->setPolygonMode(Ogre::PM_POINTS);break;
     }
 }
 

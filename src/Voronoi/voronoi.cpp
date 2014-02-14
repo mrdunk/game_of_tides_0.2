@@ -46,6 +46,8 @@ void MyVoronoi::MyPushNode(struct Edge *e){
     if(e->ep[0]){
         node_ep_0.x = e->ep[0]->coord.x;
         node_ep_0.y = e->ep[0]->coord.y;
+        if(node_ep_0.x < 0.1) node_ep_0.x = 0.1;
+        if(node_ep_0.y < 0.1) node_ep_0.y = 0.1;
         node_ep_0.type = TYPE_VPOINT;
         if(Container->count(node_ep_0.coord())){
             node_ep_0 = (*Container)[node_ep_0.coord()];
@@ -56,6 +58,8 @@ void MyVoronoi::MyPushNode(struct Edge *e){
     if(e->ep[1]){
         node_ep_1.x = e->ep[1]->coord.x;
         node_ep_1.y = e->ep[1]->coord.y;
+         if(node_ep_1.x < 0.1) node_ep_1.x = 0.1;
+         if(node_ep_1.y < 0.1) node_ep_1.y = 0.1;
         node_ep_1.type = TYPE_VPOINT;
         if(Container->count(node_ep_1.coord())){
             node_ep_1 = (*Container)[node_ep_1.coord()];
@@ -118,6 +122,4 @@ void MyVoronoi::MyPushNode(struct Edge *e){
         (*Container)[node_ep_1.coord()] = node_ep_1;
     }
 }
-
-//MyVoronoi Data::voronoi;
 

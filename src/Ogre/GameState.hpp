@@ -29,7 +29,7 @@ public:
 	DECLARE_APPSTATE_CLASS(GameState)
 
 	void enter();
-	void createScene(Data& data);
+	void createScene();
 	void exit();
 	bool pause();
 	void resume();
@@ -50,10 +50,15 @@ public:
 	void update(double timeSinceLastFrame);
 
     void initMaterial(void);
-    void generateScenery(Data& data, Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines);
+    void generateScenery(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines);
     void drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
-    void drawHill(Data& data, Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapSite* centre);
-    Ogre::ColourValue colour(int height, int type);
+    void drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapSite* centre);
+    Ogre::ColourValue colour(int cornerHeight, int terrain);
+
+    /* Calculate the area of the map currently under the viewport.
+     * This assmess the cmaera is pointing straight down.
+     */
+    void calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY);
 
 private:
 	Ogre::SceneNode*			m_pOgreHeadNode;
@@ -75,6 +80,8 @@ private:
 	Ogre::Entity*				m_pCurrentEntity;
 	bool						m_bLMouseDown, m_bRMouseDown;
 	bool						m_bSettingsMode;
+
+    Data                        data;
 };
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
