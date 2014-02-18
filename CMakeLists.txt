@@ -101,6 +101,7 @@ set(HDRS
     ./src/Ogre/AppStateManager.hpp
     ./src/Ogre/DemoApp.hpp
     ./src/Ogre/GameState.hpp
+    ./src/Ogre/DebugState.hpp
     ./src/Ogre/MenuState.hpp
     ./src/Ogre/PauseState.hpp
     ./src/data/data.h
@@ -113,6 +114,7 @@ set(SRCS
     ./src/Ogre/AppStateManager.cpp
     ./src/Ogre/DemoApp.cpp
     ./src/Ogre/GameState.cpp
+    ./src/Ogre/DebugState.cpp
     ./src/Ogre/MenuState.cpp
     ./src/Ogre/PauseState.cpp
     ./src/Ogre/AdvancedOgreFramework.cpp

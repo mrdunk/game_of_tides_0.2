@@ -1,6 +1,7 @@
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
 #include "GameState.hpp"
+#include <utility>      // std::pair, std::make_pair
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -31,9 +32,6 @@ void GameState::enter()
     //m_pSceneMgr->setAmbientLight(Ogre::ColourValue(0.7f, 0.7f, 0.7f));
 
     m_pSceneMgr->addRenderQueueListener(OgreFramework::getSingletonPtr()->m_pOverlaySystem);
-
-    m_pRSQ = m_pSceneMgr->createRayQuery(Ray());
-    m_pRSQ->setQueryMask(OGRE_HEAD_MASK);
 
     m_pCamera = m_pSceneMgr->createCamera("GameCamera");
     //m_pCamera->setPosition(Vector3(5, 60, 60));
@@ -93,7 +91,6 @@ void GameState::exit()
     OgreFramework::getSingletonPtr()->m_pLog->logMessage("Leaving GameState...");
 
     m_pSceneMgr->destroyCamera(m_pCamera);
-    m_pSceneMgr->destroyQuery(m_pRSQ);
     if(m_pSceneMgr)
         OgreFramework::getSingletonPtr()->m_pRoot->destroySceneManager(m_pSceneMgr);
 }
@@ -120,13 +117,16 @@ void GameState::createScene()
    
     manual_planes->convertToMesh("test.mesh.planes");
     Entity *ent1 = m_pSceneMgr->createEntity("planes", "test.mesh.planes");
+    cout << "manual_planes size: " << ent1->getMesh()->getSize() << "\n";
 //    m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(ent1);
 
-    manual_lines->convertToMesh("test.mesh.lines");
-    Entity *ent2 = m_pSceneMgr->createEntity("lines", "test.mesh.lines");
-    m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(ent2);
-
-    ent2->setVisible(false);
+    if(manual_lines->getNumSections() > 0){
+        manual_lines->convertToMesh("test.mesh.lines");
+        Entity *ent2 = m_pSceneMgr->createEntity("lines", "test.mesh.lines");
+        m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(ent2);
+        ent2->setVisible(false);
+        cout << "manual_lines size: " << ent2->getMesh()->getSize() << "\n";
+    }
 
 
 //    return;
@@ -144,6 +144,17 @@ void GameState::createScene()
     sg->addEntity(ent1, Ogre::Vector3(0,0,0), rot0, Ogre::Vector3(1,1,1));
 
     sg->build();
+
+    /*cout << "Post draw data check....\n";
+    for(int i = 0; i <= RECURSE; ++i){
+        {
+            MyVoronoi voronoi;
+            voronoi.SetRecursion(i);
+            voronoi.RegisterContainer(&(data.MapContainer));
+            voronoi.VerifyGraph(i);
+        }
+    }
+    cout << "done.\n";*/
 
 }
 
@@ -170,28 +181,40 @@ void GameState::generateScenery(ManualObject* manual_planes, ManualObject* manua
     manual_lines->begin("SolidColour", Ogre::RenderOperation::OT_LINE_LIST);
 
     //drawLine(manual_lines, Ogre::Vector3(0, 2000, 0), Ogre::Vector3(MAP_SIZE/2, 2000, MAP_SIZE/2));
-
+    int count = 0;
     for (auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
         if(it->second.type == TYPE_SITE){
             // Only do this stuff for sites. (We'd get it twice if we did it for corners as well.)
+            ++count;
+            if(count > 500000){
+                cout << "clearing\n";
+                count = 0;
+                manual_lines->end();
+                manual_lines->clear();
+                manual_lines->begin("SolidColour", Ogre::RenderOperation::OT_LINE_LIST);
 
+                //break;
+            }
             drawHill(manual_planes, manual_lines, &(it->second));
         }
     }
     std::cout << "done drawHill\n";
     manual_planes->end();
     manual_lines->end();
+    std::cout << count << " hills.\n";
+    std::cout << manual_lines->getNumSections() << " manual_lines\n";
+    std::cout << manual_planes->getNumSections() << " manual_planes\n";
 }
 
 
 Ogre::ColourValue GameState::colour(int cornerHeight, int terrain){
-    if(terrain >= TERRAIN_LAND or terrain == TERRAIN_UNDEFINED){
-        cornerHeight = cornerHeight * 1000 / MAP_SIZE;
+    if(terrain >= TERRAIN_LAND or terrain == TERRAIN_UNDEFINED or terrain == TERRAIN_SHORE){
+        cornerHeight = cornerHeight * 4000 / MAP_SIZE;
         if(cornerHeight <= 0) cornerHeight = 1;
         return Ogre::ColourValue((float)cornerHeight / 50.0, 0.8 / cornerHeight, 0);  // green
-    } else if(terrain == TERRAIN_SHORE){
-        cornerHeight = cornerHeight * 1000 / MAP_SIZE;
-        return Ogre::ColourValue(0.5, 0, 0);
+    //} else if(terrain == TERRAIN_SHORE){
+    //    cornerHeight = cornerHeight * 1000 / MAP_SIZE;
+    //    return Ogre::ColourValue(0.5, 0, 0);
     }
     return Ogre::ColourValue(0, 0.1, 0.4);  // blue
 }
@@ -199,10 +222,10 @@ Ogre::ColourValue GameState::colour(int cornerHeight, int terrain){
 
 void GameState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapSite* centre){
     if(centre->x < 0 or centre->y < 0 or centre->x > MAP_SIZE or centre->y > MAP_SIZE) return;
-    if(centre->num_corners(RECURSE) == 0) return;
+    if(centre->num_corners(RECURSE) <= 0) return;   // No data for this recursion level.
     static int vertexCount = 0;
     //if(vertexCount > 0) return;
-    //if(vertexCount > 1000000) return;
+    //if(vertexCount > 3000000) return;
 
     MapSite current_corner = {};
     Ogre::Vector3 current_corner_v(0,0,0);
@@ -219,49 +242,51 @@ void GameState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* 
     
     int cornerCount = 0;
     int recursion = RECURSE;
-    for (auto corner_it = centre->corner_begin(recursion); corner_it != centre->corner_end(recursion); ++corner_it){
-        current_corner = data.MapContainer[*corner_it];
-        float x, y;
-        KeyToCoord(current_corner.coord(), x, y);
-        if(fabs(current_corner.x - x) > MAP_MIN_RES *10 or fabs(current_corner.y - y) > MAP_MIN_RES *10){
-            cout << "baws!\n";
-            current_corner.x = -1; // < MAP_MIN_RES will prevent this one from being drawn.
+    //if(centre->num_corners(recursion) >= 0){
+        for (auto corner_it = centre->corner_begin(recursion); corner_it != centre->corner_end(recursion); ++corner_it){
+            if(data.MapContainer.count(*corner_it) > 0){
+                current_corner = data.MapContainer[*corner_it];
+                current_corner_v = Ogre::Vector3(current_corner.x, 0, current_corner.y);
+
+                if(current_corner_v.x > MAP_MIN_RES and current_corner_v.z > MAP_MIN_RES and current_corner_v.x < MAP_SIZE and current_corner_v.z < MAP_SIZE){
+                    // height is the average of all adgacent sites.
+                    int height = 0, heightCount = 0;
+                    //if(current_corner.num_sites(recursion) >= 0){
+                        for (auto adgSite_it = current_corner.site_begin(recursion); adgSite_it != current_corner.site_end(recursion); ++adgSite_it){
+                            if(data.MapContainer.count(*adgSite_it) > 0){
+                                height += data.MapContainer[*adgSite_it].height;
+                                ++heightCount;
+                            }
+                        }
+                    //}
+                    if(heightCount > 0) height /= heightCount;
+                    if(height >= 0) current_corner_v.y = height;
+                    else current_corner_v.y = 0;
+
+                    // calculate normal for this point.
+                    Ogre::Vector3 dir0 = edge_a - current_corner_v;
+                    Ogre::Vector3 dir0_flat(dir0.x, 0, dir0.z);
+                    Ogre::Vector3 dir1 = Quaternion(Degree(90), Vector3::UNIT_Y) * dir0_flat;
+                    normal = dir0.crossProduct(dir1).normalisedCopy();
+
+                    manual_planes->position(current_corner_v);
+                    manual_planes->colour(colour(current_corner_v.y, centre->terrain));
+                    manual_planes->normal(normal);
+
+                    if(cornerCount > 0){
+                        manual_planes->triangle(vertexCount, vertexCount + cornerCount, vertexCount + cornerCount +1);
+                        drawLine(manual_lines, previous_corner_v, current_corner_v);
+                    }
+                    if(first_corner_v == Ogre::Vector3(0,0,0)){
+                        first_corner_v = current_corner_v;
+                    }
+
+                    previous_corner_v = current_corner_v;
+                    ++cornerCount;
+                }
+            }
         }
-        current_corner_v = Ogre::Vector3(current_corner.x, 0, current_corner.y);
-
-        if(current_corner_v.x > MAP_MIN_RES and current_corner_v.z > MAP_MIN_RES and current_corner_v.x < MAP_SIZE and current_corner_v.z < MAP_SIZE){
-            // height is the average of all adgacent sites.
-            int height = 0, heightCount = 0;
-            for (auto adgSite_it = current_corner.site_begin(recursion); adgSite_it != current_corner.site_end(recursion); ++adgSite_it){
-                height += data.MapContainer[*adgSite_it].height;
-                ++heightCount;
-            }
-            if(heightCount > 0) height /= heightCount;
-            if(height >= 0) current_corner_v.y = height;
-            else current_corner_v.y = 0;
-
-            // calculate normal for this point.
-            Ogre::Vector3 dir0 = edge_a - current_corner_v;
-            Ogre::Vector3 dir0_flat(dir0.x, 0, dir0.z);
-            Ogre::Vector3 dir1 = Quaternion(Degree(90), Vector3::UNIT_Y) * dir0_flat;
-            normal = dir0.crossProduct(dir1).normalisedCopy();
-
-            manual_planes->position(current_corner_v);
-            manual_planes->colour(colour(current_corner_v.y, centre->terrain));
-            manual_planes->normal(normal);
-
-            if(cornerCount > 0){
-                manual_planes->triangle(vertexCount, vertexCount + cornerCount, vertexCount + cornerCount +1);
-                drawLine(manual_lines, previous_corner_v, current_corner_v);
-            }
-            if(first_corner_v == Ogre::Vector3(0,0,0)){
-                first_corner_v = current_corner_v;
-            }
-
-            previous_corner_v = current_corner_v;
-            ++cornerCount;
-        }
-    }
+    //}
     if(cornerCount > 1){
         manual_planes->triangle(vertexCount, vertexCount + cornerCount, vertexCount + 1);
     }
@@ -269,10 +294,45 @@ void GameState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* 
     vertexCount += cornerCount +1;
 }
 
+// comprison for drawline().
+// http://ideone.com/AQfmO1
+bool operator < (const std::pair<Ogre::Vector3,Ogre::Vector3> &l, const std::pair<Ogre::Vector3,Ogre::Vector3> &r){
+    if(max(l.first.x, l.second.x) == max(r.first.x, r.second.x)){
+        if(min(l.first.x, l.second.x) == min(r.first.x, r.second.x)){
+            if(max(l.first.y, l.second.y) == max(r.first.y, r.second.y)){
+                return min(l.first.y, l.second.y) > min(r.first.y, r.second.y);
+            } else {
+                return max(l.first.y, l.second.y) > max(r.first.y, r.second.y);
+            }
+        } else {
+            return min(l.first.x, l.second.x) > min(r.first.x, r.second.x);
+        }
+    } else {
+        return max(l.first.x, l.second.x) > max(r.first.x, r.second.x);
+    }
+}
+
+class DrawLineCompare{
+    public:
+        bool operator()(const std::pair<Ogre::Vector3,Ogre::Vector3> &l, const std::pair<Ogre::Vector3,Ogre::Vector3> &r){
+            return operator<(l, r);
+        }
+};
 
 void GameState::drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
-    mo->position(Ogre::Vector3(pointA.x, 10000, pointA.z));
-    mo->position(Ogre::Vector3(pointB.x, 10000, pointB.z));
+    static std::set<std::pair<Ogre::Vector3,Ogre::Vector3>,  DrawLineCompare> alreadyDrawn;
+
+    if(pointA == pointB) return;
+
+    std::pair<Ogre::Vector3,Ogre::Vector3> insertMe (pointA, pointB);
+    if(alreadyDrawn.find(insertMe) != alreadyDrawn.end()){
+        // already drawn
+        return;
+    }
+    alreadyDrawn.insert(insertMe);
+
+    mo->position(Ogre::Vector3(pointA.x, pointA.y + 10, pointA.z));
+    mo->position(Ogre::Vector3(pointB.x, pointB.y + 10, pointB.z));
 }
 
 

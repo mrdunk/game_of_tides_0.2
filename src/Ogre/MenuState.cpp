@@ -40,6 +40,7 @@ void MenuState::enter()
     OgreFramework::getSingletonPtr()->m_pTrayMgr->showLogo(OgreBites::TL_BOTTOMRIGHT);
     OgreFramework::getSingletonPtr()->m_pTrayMgr->showCursor();
     OgreFramework::getSingletonPtr()->m_pTrayMgr->createButton(OgreBites::TL_CENTER, "EnterBtn", "Enter GameState", 250);
+    OgreFramework::getSingletonPtr()->m_pTrayMgr->createButton(OgreBites::TL_CENTER, "EnterBtn2", "Enter DebugState", 250);
     OgreFramework::getSingletonPtr()->m_pTrayMgr->createButton(OgreBites::TL_CENTER, "ExitBtn", "Exit AdvancedOgreFramework", 250);
     OgreFramework::getSingletonPtr()->m_pTrayMgr->createLabel(OgreBites::TL_TOP, "MenuLbl", "Menu mode", 250);
 
@@ -135,6 +136,8 @@ void MenuState::buttonHit(OgreBites::Button *button)
         m_bQuit = true;
     else if(button->getName() == "EnterBtn")
         changeAppState(findByName("GameState"));
+    else if(button->getName() == "EnterBtn2")
+        changeAppState(findByName("DebugState"));
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||

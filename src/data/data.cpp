@@ -11,40 +11,43 @@ using namespace std;
 
 
 #define SEED_ISLAND 5.0
-#define GROW_ISLAND 15 
+#define GROW_ISLAND 18 
 
 std::unordered_map<int64_t, struct MapSite> Data::MapContainer;
 
 Data::Data(void){
     if(MapContainer.size() == 0){
 
-        cout << "Testing...\n";
-        TestData();
-        cout << "done!\n";
-
         cout << "Initialising Data()\n";
         int i;
-        MapSite _centre, _zero;
+        MapSite _centre, _zero, _tmpSite;
         _centre.x = 0;
         _centre.y = 0;
         _zero.x = MAP_SIZE/2;
         _zero.y = MAP_SIZE/2;
 
         std::vector<float> xValuesV, yValuesV;
+        std::unordered_set<int64_t> newPoints;  // A set is an easy way to see if we have added this point yet.
 
         for (i = 0; i < MAP_NUM_POINTS; ++i){
-            xValuesV.push_back(MAP_SIZE * (float)rand()/RAND_MAX);
-            yValuesV.push_back(MAP_SIZE * (float)rand()/RAND_MAX);
-            
-            if(std::abs(xValuesV.back() - MAP_SIZE/2) + std::abs(yValuesV.back() - MAP_SIZE/2) < std::abs(_centre.x - MAP_SIZE/2) + std::abs(_centre.y - MAP_SIZE/2)){
-                _centre.x = xValuesV.back();
-                _centre.y = yValuesV.back();
-            }
-            if(std::abs(xValuesV.back() - MAP_SIZE/2) + std::abs(yValuesV.back() - MAP_SIZE/2) > std::abs(_zero.x - MAP_SIZE/2) + std::abs(_zero.y - MAP_SIZE/2)){
-                _zero.x = xValuesV.back();
-                _zero.y = yValuesV.back();
+            _tmpSite.x = 10 * (int)((rand() % MAP_SIZE) / 10);
+            _tmpSite.y = 10 * (int)((rand() % MAP_SIZE) / 10);
+            if(newPoints.count(_tmpSite.coord()) == 0){
+                newPoints.insert(_tmpSite.coord());
+                xValuesV.push_back(_tmpSite.x);
+                yValuesV.push_back(_tmpSite.y);
+
+                if(std::abs(xValuesV.back() - MAP_SIZE/2) + std::abs(yValuesV.back() - MAP_SIZE/2) < std::abs(_centre.x - MAP_SIZE/2) + std::abs(_centre.y - MAP_SIZE/2)){
+                    _centre.x = xValuesV.back();
+                    _centre.y = yValuesV.back();
+                }
+                if(std::abs(xValuesV.back() - MAP_SIZE/2) + std::abs(yValuesV.back() - MAP_SIZE/2) > std::abs(_zero.x - MAP_SIZE/2) + std::abs(_zero.y - MAP_SIZE/2)){
+                    _zero.x = xValuesV.back();
+                    _zero.y = yValuesV.back();
+                }
             }
         }
+        totNumPoints = newPoints.size();;
 
         centre = _centre.coord();
         zero = _zero.coord();
@@ -56,87 +59,29 @@ Data::Data(void){
             voronoi.RegisterContainer(&MapContainer);
             // We are using a vector rather than an array that generateVoronoi() expects.
             // "&xValuesV[0]" is the pointer to the start of array.
-            voronoi.generateVoronoi(&xValuesV[0], &yValuesV[0], MAP_NUM_POINTS, 0, MAP_SIZE, 0, MAP_SIZE, MAP_MIN_RES);
+            voronoi.generateVoronoi(&xValuesV[0], &yValuesV[0], MAP_NUM_POINTS, 0, MAP_SIZE, 0, MAP_SIZE, 1);//MAP_MIN_RES);
+            voronoi.VerifyGraph(0);
         }
         cout << "done!\n";
 
-
-        cout << "Generating point islands...\n";
-
-        std::unordered_set<int64_t> seed_points;
-        int islandCount = 0;
-
-        for(auto it = MapContainer.begin(); it != MapContainer.end(); ++it){
-            if(100.0 * (float)rand() / RAND_MAX <= SEED_ISLAND and it->second.x > MAP_SIZE/8 and it->second.x < 7* MAP_SIZE/8 and it->second.y > MAP_SIZE/8 and it->second.y < 7* MAP_SIZE/8){
-                ++islandCount;
-                it->second.height = 10;
-                seed_points.insert(it->second.coord());
-            } //else {
-            //    it->second.height = -1;
-            //}
-        }
-        if(islandCount == 0){
-            cout << "No natural islands. Using map centre point.\n";
-            seed_points.insert(centre);
-        }
+        cout << "Raising land....\n";
+        RaiseLand(0);
         cout << "done!\n";
 
-        cout << "Raising land arround point islands....\n";
-        RaiseLand(seed_points);
-        cout << "done!\n";
-
-        cout << "Defining shore....\n";
-        std::unordered_set<int64_t> shore = DefineShore();
-        cout << "done!\n";
-
-        //std::unordered_set<int64_t> shore;
-        int totNumPoints = MAP_NUM_POINTS;
-        std::unordered_set<int64_t> newPoints;
+        std::unordered_set<int64_t> shore;
         for(int i = 1; i <= RECURSE; ++i){
             cout << "Moar detail...\n";
-            newPoints.clear();
-            shore = DefineShore();
-            //shore = GetShore(i -1);
-            MoreDetail(i, shore, newPoints);
-
-            // copy newPoints into xValuesV and yValuesV for voronoi.generateVoronoi().
-            for(auto it = newPoints.begin(); it != newPoints.end(); ++it){
-                float tmpX, tmpY;
-                KeyToCoord(*it, tmpX, tmpY);
-                xValuesV.push_back(tmpX);
-                yValuesV.push_back(tmpY);
-            }
-            totNumPoints += newPoints.size();
-            {
-                MyVoronoi voronoi;
-                voronoi.RegisterContainer(&MapContainer);
-                voronoi.SetRecursion(i);
-                voronoi.generateVoronoi(&xValuesV[0], &yValuesV[0], totNumPoints, 0, MAP_SIZE, 0, MAP_SIZE, MAP_MIN_RES);
-            }
-            for(auto it = newPoints.begin(); it != newPoints.end(); ++it){
-                if(MapContainer.count(*it)>0){
-                    MapContainer[*it].height = 10;
-                } else cout << "***************\n";
-            }
-
-            ErodeShore(i);
-            ErodeShore(i);
-            ErodeShore(i);
-            //ErodeShore(i);
-
-
+            MoreDetail(i, xValuesV, yValuesV);
             cout << "done!\n";
         }
 
 
         cout << "Setting land heights...\n";
-        //shore = GetShore(RECURSE);
-        shore = DefineShore();
-        SetHeight(shore);
+        SetHeight();
         cout << "done!\n";
 
         cout << "Testing...\n";
-        TestData();
+        //TestData();
         cout << "done!\n";
     }
 }
@@ -174,99 +119,6 @@ void Data::Section(float lowX, float lowY, float highX, float highY){
     cout << lowX << "\t,\t" << lowY << "\n" << highX << "\t,\t" << highY << "\n\n\n";
 }
 
-void Data::TestData(void){
-    bool error;
-    for(auto it = MapContainer.begin(); it != MapContainer.end(); ++it){
-            error = false;
-            MapSite testNode = it->second;
-            if(testNode.coord() != it->first) cout << it->first << " != " << testNode.coord() << "\n";
-            float x, y;
-            KeyToCoord(testNode.coord(), x, y);
-            if(fabs(testNode.x - x) > MAP_MIN_RES *10 or fabs(testNode.y - y) > MAP_MIN_RES *10){
-                if(!error) cout << "\n";
-                error = true;
-                cout << fabs(testNode.x - x) << "\t" << fabs(testNode.y - y) << "\t" << testNode.type << "\n";
-                cout << testNode.x << "\t" << x << "\t" << testNode.y << "\t" << y << "\n";
-            }
-
-            if(testNode.recursionSize() > RECURSE +1){
-                if(!error) cout << "\n";
-                error = true;
-                cout << testNode.recursionSize() << "\n";
-            }
-            
-            bool cont = true;
-            unsigned int recurse = 0;
-            while(cont and recurse <= RECURSE){
-                if(testNode.type == TYPE_SITE){
-                for(auto itSites = testNode.site_begin(recurse); itSites != testNode.site_end(recurse); ++itSites){
-                    MapSite site = MapContainer[*itSites];
-                    bool exists = false;
-                    if(testNode.type == TYPE_SITE){
-                        for(auto itSites2 = site.site_begin(recurse); itSites2 != site.site_end(recurse); ++itSites2){
-                            MapSite site2 = MapContainer[*itSites2];
-                            if(site2.coord() == testNode.coord()){
-                                exists = true;
-                                break;
-                            }
-                        }
-                    } else if(testNode.type == TYPE_VPOINT){
-                        for(auto corners = site.corner_begin(recurse); corners != site.corner_end(recurse); ++corners){
-                            MapSite corner = MapContainer[*corners];
-                            if(corner.coord() == testNode.coord()){
-                                exists = true;
-                                break;
-                            }
-                        }
-                    }
-                    if(!exists){
-                        if(!error) cout << "\n";
-                        error = true;
-                        cout << " s" << recurse << " ";
-                    }
-                }
-                for(auto itCorners = testNode.corner_begin(recurse); itCorners != testNode.corner_end(recurse); ++itCorners){
-                    MapSite corner = MapContainer[*itCorners];
-                    bool exists = false;
-                    if(testNode.type == TYPE_SITE){
-                        for(auto itSites2 = corner.site_begin(recurse); itSites2 != corner.site_end(recurse); ++itSites2){
-                            MapSite site2 = MapContainer[*itSites2];
-                            if(site2.coord() == testNode.coord()){
-                                exists = true;
-                                break;
-                            }
-                        }
-                    }
-                    if(!exists){
-                        if(!error) cout << "\n";
-                        error = true;
-                        cout << " c" << recurse << " ";
-                    }
-                }
-                }
-
-                cont = false;
-                if(recurse <= testNode.recursionSize() -1) cont = true;
-                ++recurse;
-            }
-            if(error){ 
-                if(testNode.type == TYPE_SITE) cout << " s:" << testNode.recDepth;
-                else if(testNode.type == TYPE_VPOINT) cout << " p:" << testNode.recDepth;
-                else cout << " u:" << testNode.recDepth;
-            }
-
-            if(error){
-                cout << "\n";
-            } else {
-                //if(testNode.type == TYPE_SITE) cout << ".";
-                //else if(testNode.type == TYPE_VPOINT) cout << "-";
-                //else cout << "*";
-            }
-            if(testNode.type == TYPE_UNDEFINED) cout << " ** " << testNode.x << "," << testNode.y << "\n";
-
-    }
-}
-
 /* returns a set of all the land polygons which are adjacent to water. */
 std::unordered_set<int64_t> Data::GetShore(int recursion){
     std::unordered_set<int64_t> shore;
@@ -278,42 +130,114 @@ std::unordered_set<int64_t> Data::GetShore(int recursion){
     return shore;
 }
 
-/* Remove the first layer of polygons from arround all land masses. */
+/* Remove the first layers of polygons from arround all land masses. */
 void Data::ErodeShore(int recursion){
-    //std::unordered_set<int64_t> shore = GetShore(recursion);
-    std::unordered_set<int64_t> shore = DefineShore();
-//    float lowX, lowY, highX, highY;
 
-    for(auto it = shore.begin(); it != shore.end(); ++it){
-        if(MapContainer[*it].recDepth == recursion){
-//            MapContainer[*it].boundingBox(recursion, lowX, lowY, highX, highY);
-//            if(highX - lowX > 2000 or highY - lowY > 2000){
-                MapContainer[*it].height = -1;
-//            }
+    // Get the average size of a polygon at this recusion level so we can mainly filter out the big ones later.
+    float averageHillSize = 0;
+    int count = 0;
+    float lowX, lowY, highX, highY;
+    for(auto it = MapContainer.begin(); it != MapContainer.end(); ++it){
+        if(it->second.recDepth == recursion){
+            ++count;
+            it->second.boundingBox(recursion, lowX, lowY, highX, highY);
+            averageHillSize += max(highX - lowX, highY - lowY);
         }
     }
-}
+    averageHillSize /= count;
+    
+    vector<float> removeSizes = {averageHillSize * 100,
+                                 averageHillSize * 100,
+                                 averageHillSize,
+                                 averageHillSize,
+                                 averageHillSize / 4};
 
-void Data::MoreDetail(int recursion, std::unordered_set<int64_t> shore, std::unordered_set<int64_t>& newPoints){
-    MapSite working, tmpMapSite;
-    float lowX, lowY, highX, highY, x, y;
-    for(auto it = shore.begin(); it != shore.end(); ++it){
-        // Make some new points and add if they fall within the polygon.
-        working = MapContainer[*it];
-        working.boundingBox(recursion, lowX, lowY, highX, highY);
-        for(int p = 0; p < 80; ++p){
-            x = lowX + rand() % (int)(highX - lowX);
-            y = lowY + rand() % (int)(highY - lowY);
-            if(working.isPointInHill(recursion, x, y)){
-                tmpMapSite.x = x;
-                tmpMapSite.y = y;
-                newPoints.insert(tmpMapSite.coord());
+    for(auto size = removeSizes.begin(); size != removeSizes.end(); ++size){
+        std::unordered_set<int64_t> shore = DefineShore();
+        //std::unordered_set<int64_t> shore = GetShore(recursion);
+        float lowX, lowY, highX, highY;
+
+        for(auto it = shore.begin(); it != shore.end(); ++it){
+            if(MapContainer[*it].recDepth == recursion){
+                MapContainer[*it].boundingBox(recursion, lowX, lowY, highX, highY);
+                if(highX - lowX > *size or highY - lowY > *size){
+                    MapContainer[*it].height = -1;
+                }
             }
         }
     }
 }
 
-void Data::RaiseLand(std::unordered_set<int64_t>& open){
+void Data::MoreDetail(int recursion, std::vector<float>& xValuesV, std::vector<float>& yValuesV){
+    std::unordered_set<int64_t> shore = DefineShore();
+
+    std::unordered_set<int64_t> newPoints;
+    MapSite working, tmpMapSite;
+    float lowX, lowY, highX, highY, x, y;
+
+    for(auto it = shore.begin(); it != shore.end(); ++it){
+        // Make some new points and add if they fall within the polygon.
+        working = MapContainer[*it];
+        working.boundingBox(recursion, lowX, lowY, highX, highY);
+        for(int p = 0; p < 60; ++p){
+            x = 10 * (int)((lowX + rand() % (int)(highX - lowX)) / 10);
+            y = 10 * (int)((lowY + rand() % (int)(highY - lowY)) / 10);
+
+            if(working.isPointInHill(recursion, x, y)){
+                tmpMapSite.x = x;
+                tmpMapSite.y = y;
+                if(MapContainer.count(tmpMapSite.coord()) == 0 and newPoints.count(tmpMapSite.coord()) == 0){
+                    // not already an node here so safe to add.
+                    newPoints.insert(tmpMapSite.coord());
+                    xValuesV.push_back(x);
+                    yValuesV.push_back(y);
+                }
+            }
+        }
+    }
+
+    // Calculate a new voronoi diagram.
+    totNumPoints += newPoints.size();
+    {
+        MyVoronoi voronoi;
+        voronoi.RegisterContainer(&MapContainer);
+        voronoi.SetRecursion(recursion);
+        voronoi.generateVoronoi(&xValuesV[0], &yValuesV[0], totNumPoints, 0, MAP_SIZE, 0, MAP_SIZE, 1);//MAP_MIN_RES);
+        voronoi.VerifyGraph(recursion);
+        //cout << "\n---\n";
+        //voronoi.PopulateCorners(recursion);
+    }
+
+    // If everything went well so far, set the height above sea level.
+    for(auto it = newPoints.begin(); it != newPoints.end(); ++it){
+        if(MapContainer.count(*it) > 0){
+            MapContainer[*it].height = 10;
+        } else {
+            cout << " baws ";
+        }
+    }
+    cout << "\n";
+
+    ErodeShore(recursion);
+}
+
+void Data::RaiseLand(int recursion){
+    int islandCount = 0;
+    std::unordered_set<int64_t> open;
+    for(auto it = MapContainer.begin(); it != MapContainer.end(); ++it){
+        if(100.0 * (float)rand() / RAND_MAX <= SEED_ISLAND and it->second.x > MAP_SIZE/8 and 
+                it->second.x < 7* MAP_SIZE/8 and it->second.y > MAP_SIZE/8 and it->second.y < 7* MAP_SIZE/8){
+            ++islandCount;
+            it->second.height = 10;
+            open.insert(it->second.coord());
+        }
+    }
+    if(islandCount == 0){
+        cout << "No natural islands. Using map centre point.\n";
+        open.insert(centre);
+    }
+
+
     std::unordered_set<int64_t> closed;
     std::unordered_set<int64_t> next;
 
@@ -322,7 +246,7 @@ void Data::RaiseLand(std::unordered_set<int64_t>& open){
             MapContainer[*it].height = 10;
             closed.insert(*it);
             if(MapContainer[*it].x > MAP_SIZE/8 and MapContainer[*it].y > MAP_SIZE/8 and MapContainer[*it].x < 7*MAP_SIZE/8 and MapContainer[*it].y < 7*MAP_SIZE/8){
-                for(auto it_adjacent = MapContainer[*it].site_begin(10); it_adjacent != MapContainer[*it].site_end(10); ++it_adjacent){
+                for(auto it_adjacent = MapContainer[*it].site_begin(recursion); it_adjacent != MapContainer[*it].site_end(recursion); ++it_adjacent){
                     if(!closed.count(*it_adjacent) and rand() % 100 <= GROW_ISLAND){
                         next.insert(*it_adjacent);
                     }
@@ -350,7 +274,8 @@ std::unordered_set<int64_t> Data::DefineShore(void){
         for(auto it = open.begin(); it != open.end(); ++it){
             MapContainer[*it].height = -1;
             closed.insert(*it);
-            for(auto it_adjacent = MapContainer[*it].site_begin(10); it_adjacent != MapContainer[*it].site_end(10); ++it_adjacent){
+            int rec = MapContainer[*it].recursionSize() -1;
+            for(auto it_adjacent = MapContainer[*it].site_begin(rec); it_adjacent != MapContainer[*it].site_end(rec); ++it_adjacent){
                 if(!closed.count(*it_adjacent)){
                     if(MapContainer[*it_adjacent].height <= 0){
                         MapContainer[*it_adjacent].terrain = TERRAIN_OCEAN;
@@ -369,7 +294,8 @@ std::unordered_set<int64_t> Data::DefineShore(void){
     return shore;
 }
 
-void Data::SetHeight(std::unordered_set<int64_t>& open){
+void Data::SetHeight(void){
+    std::unordered_set<int64_t> open = DefineShore();
     std::unordered_set<int64_t> closed;
     std::unordered_set<int64_t> next;
 
@@ -378,7 +304,8 @@ void Data::SetHeight(std::unordered_set<int64_t>& open){
         for(auto it = open.begin(); it != open.end(); ++it){
             MapContainer[*it].height = height;
             closed.insert(*it);
-            for(auto it_adjacent = MapContainer[*it].site_begin(10); it_adjacent != MapContainer[*it].site_end(10); ++it_adjacent){
+            int rec = MapContainer[*it].recursionSize() -1;
+            for(auto it_adjacent = MapContainer[*it].site_begin(rec); it_adjacent != MapContainer[*it].site_end(rec); ++it_adjacent){
                 if(!closed.count(*it_adjacent) and MapContainer[*it_adjacent].terrain != TERRAIN_OCEAN){  // MapContainer[*it_adjacent].height > 0){
                     next.insert(*it_adjacent);
                 }
@@ -386,7 +313,7 @@ void Data::SetHeight(std::unordered_set<int64_t>& open){
         }
         next.swap(open);
         next.clear();
-        height += MAP_SIZE / 2000;
+        height += MAP_SIZE / 4000;
     }
 }
 

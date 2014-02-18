@@ -47,14 +47,14 @@ TEST_F(MapSiteTest, BasicInitialise) {
   ASSERT_NEAR(0.0, mapSite.y, MAP_MIN_RES/2);
   EXPECT_EQ(0, mapSite.coord());
   EXPECT_EQ(0, mapSite.recursionSize());
-  EXPECT_EQ(0, mapSite.num_sites(0));
+  EXPECT_EQ(-1, mapSite.num_sites(0));
 
   mapSite.push_site(0, 1);
   mapSite.push_site(0, 2);
   mapSite.push_site(0, 1);     // Will make no difference as array already contains this value.
   EXPECT_EQ(1, mapSite.recursionSize());
   EXPECT_EQ(2, mapSite.num_sites(0));
-  EXPECT_EQ(0, mapSite.num_corners(0));
+  EXPECT_EQ(-1, mapSite.num_corners(0));
 
   mapSite.push_corner(0, 11);
   mapSite.push_corner(0, 12);
@@ -72,7 +72,7 @@ TEST_F(MapSiteTest, BasicInitialiseWithRecursion) {
     mapSite.push_site(0, 1);     // Will make no difference as array already contains this value.
     EXPECT_EQ(1, mapSite.recursionSize());
     EXPECT_EQ(2, mapSite.num_sites(0));
-    EXPECT_EQ(0, mapSite.num_corners(0));
+    EXPECT_EQ(-1, mapSite.num_corners(0));
 
     mapSite.push_site(1, 11);
     mapSite.push_site(1, 12);
@@ -80,7 +80,7 @@ TEST_F(MapSiteTest, BasicInitialiseWithRecursion) {
     mapSite.push_site(1, 13);
     EXPECT_EQ(2, mapSite.recursionSize());
     EXPECT_EQ(2, mapSite.num_sites(0));
-    EXPECT_EQ(0, mapSite.num_corners(0));
+    EXPECT_EQ(-1, mapSite.num_corners(0));
     EXPECT_EQ(3, mapSite.num_sites(1));
 
     // Try deeper recursion level without lower.
@@ -437,6 +437,77 @@ TEST_F(MapSiteTest, SortingMultipleCorner) {
         testCoords.y = y + 100;
         EXPECT_EQ(testCoords.coord(), *corner_it);
     }
+}
+
+TEST_F(MapSiteTest, CountSite) {
+    MapSite mapSite = {};
+
+    mapSite.push_site(0, 1);
+    EXPECT_EQ(mapSite.site_count(0, 1), 1);
+    EXPECT_EQ(mapSite.site_count(0, 2), 0);
+    EXPECT_EQ(mapSite.site_count(1, 1), -1);
+
+    mapSite.push_site(0, 2);
+    EXPECT_EQ(mapSite.site_count(0, 1), 1);
+    EXPECT_EQ(mapSite.site_count(0, 2), 1);
+    EXPECT_EQ(mapSite.site_count(0, 3), 0);
+    EXPECT_EQ(mapSite.site_count(1, 1), -1);
+
+    mapSite.push_site(1, 1);
+    EXPECT_EQ(mapSite.site_count(0, 1), 1);
+    EXPECT_EQ(mapSite.site_count(0, 2), 1);
+    EXPECT_EQ(mapSite.site_count(0, 3), 0);
+    EXPECT_EQ(mapSite.site_count(1, 1), 1);
+    EXPECT_EQ(mapSite.site_count(1, 2), 0);
+    EXPECT_EQ(mapSite.site_count(2, 1), -1);
+
+    mapSite.push_site(3, 1);
+    EXPECT_EQ(mapSite.site_count(0, 1), 1);
+    EXPECT_EQ(mapSite.site_count(0, 2), 1); 
+    EXPECT_EQ(mapSite.site_count(0, 3), 0); 
+    EXPECT_EQ(mapSite.site_count(1, 1), 1);
+    EXPECT_EQ(mapSite.site_count(1, 2), 0);
+    EXPECT_EQ(mapSite.site_count(2, 1), 0);
+    EXPECT_EQ(mapSite.site_count(3, 1), 1);
+    EXPECT_EQ(mapSite.site_count(3, 2), 0);
+    EXPECT_EQ(mapSite.site_count(4, 1), -1);
+}
+
+TEST_F(MapSiteTest, CountCorner) {
+    MapSite mapSite = {};
+
+    mapSite.push_corner(0, 1);
+    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
+    EXPECT_EQ(mapSite.corner_count(0, 2), 0);
+    EXPECT_EQ(mapSite.corner_count(1, 1), -1);
+
+    mapSite.push_corner(0, 2);
+    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
+    EXPECT_EQ(mapSite.corner_count(0, 2), 1);
+    EXPECT_EQ(mapSite.corner_count(0, 3), 0);
+    EXPECT_EQ(mapSite.corner_count(1, 1), -1);
+
+    mapSite.push_corner(1, 1);
+    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
+    EXPECT_EQ(mapSite.corner_count(0, 2), 1); 
+    EXPECT_EQ(mapSite.corner_count(0, 3), 0); 
+    EXPECT_EQ(mapSite.corner_count(1, 1), 1);
+    EXPECT_EQ(mapSite.corner_count(1, 2), 0);
+    EXPECT_EQ(mapSite.corner_count(2, 1), -1);
+
+    mapSite.push_corner(3, 1);
+    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
+    EXPECT_EQ(mapSite.corner_count(0, 2), 1); 
+    EXPECT_EQ(mapSite.corner_count(0, 3), 0); 
+    EXPECT_EQ(mapSite.corner_count(1, 1), 1);
+    EXPECT_EQ(mapSite.corner_count(1, 2), 0);
+    EXPECT_EQ(mapSite.corner_count(2, 1), 0);
+    EXPECT_EQ(mapSite.corner_count(3, 1), 1);
+    EXPECT_EQ(mapSite.corner_count(3, 2), 0);
+    EXPECT_EQ(mapSite.corner_count(4, 1), -1);
+
+    mapSite.push_corner(3, (int64_t)6072899082123057);
+    EXPECT_EQ(mapSite.corner_count(3, (int64_t)6072899082123057), 1);
 }
 
 }  // namespace

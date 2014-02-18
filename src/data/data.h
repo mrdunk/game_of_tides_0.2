@@ -19,10 +19,10 @@
 #define MAP_MIN_RES     0.01f
 
 #define TYPE_SITE       0
-#define TYPE_VPOINT     1
+#define TYPE_CORNER     1
 #define TYPE_UNDEFINED  -1
 
-#define RECURSE     3
+#define RECURSE         3
 
 #define TERRAIN_UNDEFINED   0
 #define TERRAIN_OCEAN       1
@@ -48,7 +48,7 @@ class CompCoord {
 
 class MapSite{
     public:
-        int type;       // TYPE_SITE or TYPE_VPOINT
+        int type;       // TYPE_SITE or TYPE_CORNER
         int recDepth;   // This element created at this recursion level.
         float x;
         float y;
@@ -63,11 +63,11 @@ class MapSite{
             terrain = TERRAIN_UNDEFINED;
         }
 
-        unsigned int recursionSize(void){
+        int recursionSize(void){
             return std::max(site.size(), corner.size());
         }
 
-        bool isShore(unsigned int recursion, std::unordered_map<int64_t, struct MapSite> &MapContainer){
+        bool isShore(int recursion, std::unordered_map<int64_t, struct MapSite> &MapContainer){
             for(auto it = site_begin(recursion); it != site_end(recursion); ++it){
                 if(MapContainer[*it].height < 0 and height >= 0) return true;
                 //if(MapContainer[*it].height >= 0 and height < 0) return true;
@@ -75,7 +75,9 @@ class MapSite{
             return false;
         }
 
-        bool isPointInHill(unsigned int recursion, float px, float py){
+        bool isPointInHill(int recursion, float px, float py){
+            recursion = min(recursion, recursionSize() -1);
+
             int64_t first = *(corner_begin(recursion));
             int64_t last = 0;
             float c1x, c1y, c2x, c2y;
@@ -83,22 +85,27 @@ class MapSite{
                 if(it != corner_begin(recursion)){
                     KeyToCoord(last, c1x, c1y);
                     KeyToCoord(*it, c2x, c2y);
-                    if(pointInsideTriangle(px, py, x, y, c1x, c1y, c2x, c2y)) return true;
+                    if(pointInsideTriangle(px, py, x, y, c1x, c1y, c2x, c2y)){
+                        return true;
+                    }
                 }
                 last = *it;
             }
             KeyToCoord(last, c1x, c1y);
             KeyToCoord(first, c2x, c2y);
-            if(pointInsideTriangle(px, py, x, y, c1x, c1y, c2x, c2y)) return true;
+            if(pointInsideTriangle(px, py, x, y, c1x, c1y, c2x, c2y)){
+                return true;
+            }
             return false;
         }
 
-        void boundingBox(unsigned int recursion, float& lowX, float& lowY, float& highX, float& highY){
+        void boundingBox(int recursion, float& lowX, float& lowY, float& highX, float& highY){
             lowX = MAP_SIZE;
             lowY = MAP_SIZE;
             highX = 0;
             highY = 0;
             float x, y;
+            recursion = min(recursion, recursionSize() -1);
             for(auto it = corner_begin(recursion); it != corner_end(recursion); ++it){
                 KeyToCoord(*it, x, y);
                 if(x > highX) highX = x;
@@ -108,75 +115,108 @@ class MapSite{
             }
         }
 
-        int num_sites(unsigned int recursion){
-            if(recursion >= site.size()) return 0;
+        int num_sites(int recursion){
+            if(recursion >= (int)site.size()) return -1;
             return site[recursion].size();
         }
 
-        int num_corners(unsigned int recursion){
-            if(recursion >= corner.size()) return 0;
+        int num_corners(int recursion){
+            if(recursion >= (int)corner.size()) return -1;
             return corner[recursion].size();
         }
 
-        void push_site(unsigned int recursion, int64_t s){
+        void push_site(int recursion, int64_t s){
             CompCoord::PassParentCoord(x, y);
-            if(recursion >= site.size()){
+            if(recursion >= (int)site.size()){
                 std::set<int64_t, CompCoord> empty;
                 empty.clear();
 
                 // create all missing recursion levels
-                while(recursion >= site.size()){
+                while(recursion >= (int)site.size()){
                     site.push_back(empty);
                 }
             }
             site[recursion].insert(s);
         }
 
-        void push_corner(unsigned int recursion, int64_t s){
+        void push_corner(int recursion, int64_t s){
             //cout << "push_corner(" << recursion << ", " << s << ")\n";
             CompCoord::PassParentCoord(x, y);
-            if(recursion >= corner.size()){
+            if(recursion >= (int)corner.size()){
                 //cout << corner.size() << "\n";
                 std::set<int64_t, CompCoord> empty;
                 empty.clear();
 
-                while(recursion >= corner.size()){
+                while(recursion >= (int)corner.size()){
                     corner.push_back(empty);
                 }
             }
             corner[recursion].insert(s);
         }
 
-        std::set<int64_t, CompCoord>::iterator site_begin(unsigned int recursion){
-            if(recursion >= site.size()){
+        std::set<int64_t, CompCoord>::iterator site_begin(int recursion){
+            //cout << "site_begin(" << recursion << ")\n";
+
+            /*if((int)recursion >= (int)site.size()){
+                if(site.size() == 0){
+                    std::set<int64_t, CompCoord> empty;
+                    empty.clear();
+                    site.push_back(empty);
+                }
                 recursion = site.size() -1;
-            }
+            }*/
             CompCoord::PassParentCoord(x, y);
             return site[recursion].begin();
         }
 
-        std::set<int64_t, CompCoord>::iterator corner_begin(unsigned int recursion){
-            if(recursion >= corner.size()){
+        std::set<int64_t, CompCoord>::iterator corner_begin(int recursion){
+            //cout << "corner_begin(" << recursion << ")\n";
+
+            /*if((int)recursion >= (int)corner.size()){
+                if(corner.size() == 0){
+                    std::set<int64_t, CompCoord> empty;
+                    empty.clear();
+                    corner.push_back(empty);
+                }
                 recursion = corner.size() -1;
-            }
+            }*/
             CompCoord::PassParentCoord(x, y);
             return corner[recursion].begin();
         }
 
-        std::set<int64_t, CompCoord>::iterator site_end(unsigned int recursion){
-            if(recursion >= site.size()){
+        std::set<int64_t, CompCoord>::iterator site_end(int recursion){
+            //cout << "site_end(" << recursion << ")\n";
+
+            if((int)recursion >= (int)site.size()){
                 recursion = site.size() -1;
             }
             CompCoord::PassParentCoord(x, y);
             return site[recursion].end();
         }
 
-        std::set<int64_t, CompCoord>::iterator corner_end(unsigned int recursion){
-            if(recursion >= corner.size()){
+        std::set<int64_t, CompCoord>::iterator corner_end(int recursion){
+            //cout << "corner_end(" << recursion << ")\n";
+
+            if((int)recursion >= (int)corner.size()){
                 recursion = corner.size() -1;
             }
             CompCoord::PassParentCoord(x, y);
             return corner[recursion].end();
+        }
+
+        int site_count(int recursion, int64_t s){
+            //cout << "site_count(" << recursion << ", " << s << ")\n";
+
+            if((int)(site.size() -1) < (int)recursion) return -1;
+            
+            CompCoord::PassParentCoord(x, y);
+            return site[recursion].count(s);
+        }
+
+        int corner_count(int recursion, int64_t s){
+            if((int)(corner.size() -1) < (int)recursion) return -1;
+            CompCoord::PassParentCoord(x, y);
+            return corner[recursion].count(s);
         }
 
         // Coordinates rounded to nearest MAP_MIN_RES
@@ -210,16 +250,15 @@ class Data {
         // Key to  entry closest to the 0,0 coordinate.
         int64_t zero;
 
-        void RaiseLand(std::unordered_set<int64_t>& open);
-        void SetHeight(std::unordered_set<int64_t>& open);
-        void MoreDetail(int recursion, std::unordered_set<int64_t> shore, std::unordered_set<int64_t>& newPoints);
+        void RaiseLand(int recursion);
+        void SetHeight(void);
+        void MoreDetail(int recursion, std::vector<float>& xValuesV, std::vector<float>& yValuesV);
         void ErodeShore(int recursion);
         std::unordered_set<int64_t> GetShore(int recursion);
         std::unordered_set<int64_t> DefineShore(void);
         void Section(float lowX, float lowY, float highX, float highY);
-        void TestData(void);
     private:
-
+        int totNumPoints;
 };
 
 void KeyToCoord(const int64_t key, float& x, float& y);

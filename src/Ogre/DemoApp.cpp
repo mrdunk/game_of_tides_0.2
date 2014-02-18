@@ -4,6 +4,7 @@
 
 #include "MenuState.hpp"
 #include "GameState.hpp"
+#include "DebugState.hpp"
 #include "PauseState.hpp"
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
@@ -35,6 +36,7 @@ void DemoApp::startDemo()
 
 	MenuState::create(m_pAppStateManager, "MenuState");
 	GameState::create(m_pAppStateManager, "GameState");
+    DebugState::create(m_pAppStateManager, "DebugState");
     PauseState::create(m_pAppStateManager, "PauseState");
 
 	m_pAppStateManager->start(m_pAppStateManager->findByName("MenuState"));

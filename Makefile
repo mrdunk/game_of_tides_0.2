@@ -200,6 +200,30 @@ src/Ogre/AppStateManager.cpp.s:
 	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/AppStateManager.cpp.s
 .PHONY : src/Ogre/AppStateManager.cpp.s
 
+src/Ogre/DebugState.o: src/Ogre/DebugState.cpp.o
+.PHONY : src/Ogre/DebugState.o
+
+# target to build an object file
+src/Ogre/DebugState.cpp.o:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/DebugState.cpp.o
+.PHONY : src/Ogre/DebugState.cpp.o
+
+src/Ogre/DebugState.i: src/Ogre/DebugState.cpp.i
+.PHONY : src/Ogre/DebugState.i
+
+# target to preprocess a source file
+src/Ogre/DebugState.cpp.i:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/DebugState.cpp.i
+.PHONY : src/Ogre/DebugState.cpp.i
+
+src/Ogre/DebugState.s: src/Ogre/DebugState.cpp.s
+.PHONY : src/Ogre/DebugState.s
+
+# target to generate assembly for a file
+src/Ogre/DebugState.cpp.s:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/DebugState.cpp.s
+.PHONY : src/Ogre/DebugState.cpp.s
+
 src/Ogre/DemoApp.o: src/Ogre/DemoApp.cpp.o
 .PHONY : src/Ogre/DemoApp.o
 
@@ -411,6 +435,9 @@ help:
 	@echo "... src/Ogre/AppStateManager.o"
 	@echo "... src/Ogre/AppStateManager.i"
 	@echo "... src/Ogre/AppStateManager.s"
+	@echo "... src/Ogre/DebugState.o"
+	@echo "... src/Ogre/DebugState.i"
+	@echo "... src/Ogre/DebugState.s"
 	@echo "... src/Ogre/DemoApp.o"
 	@echo "... src/Ogre/DemoApp.i"
 	@echo "... src/Ogre/DemoApp.s"

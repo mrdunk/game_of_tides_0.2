@@ -16,7 +16,7 @@ class MyVoronoi : public VoronoiDiagramGenerator {
         void RegisterContainer(std::unordered_map<int64_t, struct MapSite>* _Container);
         static std::unordered_map<int64_t, struct MapSite>* Container;
         int recursion;
-        //std::unordered_map<int64_t, struct MapSite> graph;
+        bool VerifyGraph(int recursion);
     protected:
         void MyPushNode(struct Edge *e);
         void clip_line(struct Edge *e);
