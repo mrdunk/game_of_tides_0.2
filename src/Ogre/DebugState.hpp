@@ -1,7 +1,7 @@
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-#ifndef GAME_STATE_HPP
-#define GAME_STATE_HPP
+#ifndef DEBUG_STATE_HPP
+#define DEBUG_STATE_HPP
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -13,12 +13,12 @@
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-class GameState : public AppState
+class DebugState : public AppState
 {
 public:
-	GameState();
+	DebugState();
 
-	DECLARE_APPSTATE_CLASS(GameState)
+	DECLARE_APPSTATE_CLASS(DebugState)
 
 	void enter();
 	void createScene();

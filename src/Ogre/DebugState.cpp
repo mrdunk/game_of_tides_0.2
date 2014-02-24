@@ -1,6 +1,6 @@
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-#include "GameState.hpp"
+#include "DebugState.hpp"
 #include <utility>      // std::pair, std::make_pair
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
@@ -9,7 +9,7 @@ using namespace Ogre;
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-GameState::GameState()
+DebugState::DebugState()
 {
     m_MoveSpeed			= 0.1f;
     m_RotateSpeed		= 0.3f;
@@ -24,9 +24,9 @@ GameState::GameState()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::enter()
+void DebugState::enter()
 {
-    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Entering GameState...");
+    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Entering DebugState...");
 
     m_pSceneMgr = OgreFramework::getSingletonPtr()->m_pRoot->createSceneManager(ST_GENERIC, "GameSceneMgr");
     //m_pSceneMgr->setAmbientLight(Ogre::ColourValue(0.7f, 0.7f, 0.7f));
@@ -65,18 +65,18 @@ void GameState::enter()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-bool GameState::pause()
+bool DebugState::pause()
 {
-    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Pausing GameState...");
+    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Pausing DebugState...");
 
     return true;
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::resume()
+void DebugState::resume()
 {
-    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Resuming GameState...");
+    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Resuming DebugState...");
 
     buildGUI();
 
@@ -86,9 +86,9 @@ void GameState::resume()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::exit()
+void DebugState::exit()
 {
-    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Leaving GameState...");
+    OgreFramework::getSingletonPtr()->m_pLog->logMessage("Leaving DebugState...");
 
     m_pSceneMgr->destroyCamera(m_pCamera);
     if(m_pSceneMgr)
@@ -97,16 +97,13 @@ void GameState::exit()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::createScene()
+void DebugState::createScene()
 {
     Ogre::Light* directionalLight = m_pSceneMgr->createLight("Light");
     directionalLight->setType(Ogre::Light::LT_DIRECTIONAL);
     directionalLight->setDiffuseColour(Ogre::ColourValue(.8, .8, .8));
     directionalLight->setSpecularColour(Ogre::ColourValue(.8, .8, .8));
-
     directionalLight->setDirection(Ogre::Vector3( 0, -1, 0));
-
-    //m_pSceneMgr->createLight("Light")->setPosition(75,75,75);
 
 
     initMaterial();
@@ -147,7 +144,7 @@ void GameState::createScene()
 
 }
 
-void GameState::initMaterial(void){
+void DebugState::initMaterial(void){
     static int init=false;
     if(init)
         return;
@@ -165,11 +162,12 @@ void GameState::initMaterial(void){
     matptr->getTechnique(0)->getPass(0)->setVertexColourTracking(Ogre::TVC_DIFFUSE);   
 }
 
-void GameState::generateScenery(ManualObject* manual_planes, ManualObject* manual_lines){
+void DebugState::generateScenery(ManualObject* manual_planes, ManualObject* manual_lines){
     manual_planes->begin("SolidColour", RenderOperation::OT_TRIANGLE_LIST);
     manual_lines->begin("SolidColour", Ogre::RenderOperation::OT_LINE_LIST);
 
-    /*int count = 0;
+    //drawLine(manual_lines, Ogre::Vector3(0, 2000, 0), Ogre::Vector3(MAP_SIZE/2, 2000, MAP_SIZE/2));
+    int count = 0;
     for (auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
         if(it->second.type == TYPE_SITE){
             // Only do this stuff for sites. (We'd get it twice if we did it for corners as well.)
@@ -185,57 +183,31 @@ void GameState::generateScenery(ManualObject* manual_planes, ManualObject* manua
             }
             drawHill(manual_planes, manual_lines, &(it->second));
         }
-    }*/
+    }
     std::cout << "done drawHill\n";
     manual_planes->end();
     manual_lines->end();
-    //std::cout << count << " hills.\n";
+    std::cout << count << " hills.\n";
     std::cout << manual_lines->getNumSections() << " manual_lines\n";
     std::cout << manual_planes->getNumSections() << " manual_planes\n";
 }
 
 
-Ogre::ColourValue GameState::colour(int cornerHeight, int terrain){
-    //if(terrain >= TERRAIN_LAND or terrain == TERRAIN_UNDEFINED or terrain == TERRAIN_SHORE){
-        cornerHeight = cornerHeight * 4000 / MAP_SIZE;
-        if(cornerHeight <= 0) cornerHeight = 1;
-        return Ogre::ColourValue((float)cornerHeight / 50.0, 0.8 / cornerHeight, 0);  // green
-    //} else if(terrain == TERRAIN_SHORE){
-    //    cornerHeight = cornerHeight * 1000 / MAP_SIZE;
-    //    return Ogre::ColourValue(0.5, 0, 0);
-    //}
+Ogre::ColourValue DebugState::colour(int cornerHeight, int terrain){
     return Ogre::ColourValue(0, 0.1, 0.4);  // blue
 }
 
 
-void GameState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre){
+void DebugState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre){
 }
 
-// comprison for drawline().
-// http://ideone.com/AQfmO1
-bool operator < (const std::pair<Ogre::Vector3,Ogre::Vector3> &l, const std::pair<Ogre::Vector3,Ogre::Vector3> &r){
-    if(max(l.first.x, l.second.x) == max(r.first.x, r.second.x)){
-        if(min(l.first.x, l.second.x) == min(r.first.x, r.second.x)){
-            if(max(l.first.y, l.second.y) == max(r.first.y, r.second.y)){
-                return min(l.first.y, l.second.y) > min(r.first.y, r.second.y);
-            } else {
-                return max(l.first.y, l.second.y) > max(r.first.y, r.second.y);
-            }
-        } else {
-            return min(l.first.x, l.second.x) > min(r.first.x, r.second.x);
-        }
-    } else {
-        return max(l.first.x, l.second.x) > max(r.first.x, r.second.x);
-    }
-}
-
-void GameState::drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
+void DebugState::drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
     mo->position(Ogre::Vector3(pointA.x, pointA.y + 10, pointA.z));
     mo->position(Ogre::Vector3(pointB.x, pointB.y + 10, pointB.z));
 }
 
 
-void GameState::calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY){
+void DebugState::calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY){
     // This plane sits 1/10th of the way from the camera to the surface because the full distance is out of range of the getCameraToViewportRay calculations.
     Plane worldPlane(Ogre::Vector3::UNIT_Y, 900 * Ogre::Vector3(0,m_pCamera->getPosition().y / 1000 ,0));
 
@@ -270,7 +242,7 @@ void GameState::calculateViewedMap(float& lowX, float& lowY, float& highX, float
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-bool GameState::keyPressed(const OIS::KeyEvent &keyEventRef)
+bool DebugState::keyPressed(const OIS::KeyEvent &keyEventRef)
 {
     if(m_bSettingsMode == true)
     {
@@ -346,7 +318,7 @@ bool GameState::keyPressed(const OIS::KeyEvent &keyEventRef)
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-bool GameState::keyReleased(const OIS::KeyEvent &keyEventRef)
+bool DebugState::keyReleased(const OIS::KeyEvent &keyEventRef)
 {
     OgreFramework::getSingletonPtr()->keyPressed(keyEventRef);
     return true;
@@ -354,7 +326,7 @@ bool GameState::keyReleased(const OIS::KeyEvent &keyEventRef)
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-bool GameState::mouseMoved(const OIS::MouseEvent &evt)
+bool DebugState::mouseMoved(const OIS::MouseEvent &evt)
 {
     if(OgreFramework::getSingletonPtr()->m_pTrayMgr->injectMouseMove(evt)) return true;
 
@@ -369,7 +341,7 @@ bool GameState::mouseMoved(const OIS::MouseEvent &evt)
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-bool GameState::mousePressed(const OIS::MouseEvent &evt, OIS::MouseButtonID id)
+bool DebugState::mousePressed(const OIS::MouseEvent &evt, OIS::MouseButtonID id)
 {
     if(OgreFramework::getSingletonPtr()->m_pTrayMgr->injectMouseDown(evt, id)) return true;
 
@@ -387,7 +359,7 @@ bool GameState::mousePressed(const OIS::MouseEvent &evt, OIS::MouseButtonID id)
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-bool GameState::mouseReleased(const OIS::MouseEvent &evt, OIS::MouseButtonID id)
+bool DebugState::mouseReleased(const OIS::MouseEvent &evt, OIS::MouseButtonID id)
 {
     if(OgreFramework::getSingletonPtr()->m_pTrayMgr->injectMouseUp(evt, id)) return true;
 
@@ -405,7 +377,7 @@ bool GameState::mouseReleased(const OIS::MouseEvent &evt, OIS::MouseButtonID id)
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::moveCamera()
+void DebugState::moveCamera()
 {
     if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_LSHIFT))
         m_pCamera->moveRelative(m_TranslateVector);
@@ -414,7 +386,7 @@ void GameState::moveCamera()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::getInput()
+void DebugState::getInput()
 {
     if(m_bSettingsMode == false)
     {
@@ -441,7 +413,7 @@ void GameState::getInput()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::update(double timeSinceLastFrame)
+void DebugState::update(double timeSinceLastFrame)
 {
     m_FrameEvent.timeSinceLastFrame = timeSinceLastFrame;
     OgreFramework::getSingletonPtr()->m_pTrayMgr->frameRenderingQueued(m_FrameEvent);
@@ -481,7 +453,7 @@ void GameState::update(double timeSinceLastFrame)
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::buildGUI()
+void DebugState::buildGUI()
 {
     OgreFramework::getSingletonPtr()->m_pTrayMgr->showFrameStats(OgreBites::TL_BOTTOMLEFT);
     OgreFramework::getSingletonPtr()->m_pTrayMgr->showLogo(OgreBites::TL_BOTTOMRIGHT);
@@ -510,7 +482,7 @@ void GameState::buildGUI()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::itemSelected(OgreBites::SelectMenu* menu)
+void DebugState::itemSelected(OgreBites::SelectMenu* menu)
 {
     switch(menu->getSelectionIndex())
     {

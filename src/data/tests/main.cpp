@@ -3,25 +3,23 @@
  */
 
 #include <stdlib.h>     /* srand, rand */
-
 #include "../data.h"
 #include "gtest/gtest.h"
-//#include <stdlib.h>     /* rand */
 
 namespace {
 
 
 // The fixture for testing class Foo.
-class MapSiteTest : public ::testing::Test {
+class MapNodeTest : public ::testing::Test {
  protected:
   // You can remove any or all of the following functions if its body
   // is empty.
 
-  MapSiteTest() {
+  MapNodeTest() {
     // You can do set-up work for each test here.
   }
 
-  virtual ~MapSiteTest() {
+  virtual ~MapNodeTest() {
     // You can do clean-up work that doesn't throw exceptions here.
   }
 
@@ -41,474 +39,205 @@ class MapSiteTest : public ::testing::Test {
   // Objects declared here can be used by all tests in the test case for Foo.
 };
 
-TEST_F(MapSiteTest, BasicInitialise) {
-  MapSite mapSite = {};
-  ASSERT_NEAR(0.0, mapSite.x, MAP_MIN_RES/2);
-  ASSERT_NEAR(0.0, mapSite.y, MAP_MIN_RES/2);
-  EXPECT_EQ(0, mapSite.coord());
-  EXPECT_EQ(0, mapSite.recursionSize());
-  EXPECT_EQ(-1, mapSite.num_sites(0));
-
-  mapSite.push_site(0, 1);
-  mapSite.push_site(0, 2);
-  mapSite.push_site(0, 1);     // Will make no difference as array already contains this value.
-  EXPECT_EQ(1, mapSite.recursionSize());
-  EXPECT_EQ(2, mapSite.num_sites(0));
-  EXPECT_EQ(-1, mapSite.num_corners(0));
-
-  mapSite.push_corner(0, 11);
-  mapSite.push_corner(0, 12);
-  mapSite.push_corner(0, 11);     // Will make no difference as array already contains this value.
-  EXPECT_EQ(1, mapSite.recursionSize());
-  EXPECT_EQ(2, mapSite.num_sites(0));
-  EXPECT_EQ(2, mapSite.num_corners(0));
-}
-
-TEST_F(MapSiteTest, BasicInitialiseWithRecursion) {
-    MapSite mapSite = {};
-
-    mapSite.push_site(0, 1);
-    mapSite.push_site(0, 2);
-    mapSite.push_site(0, 1);     // Will make no difference as array already contains this value.
-    EXPECT_EQ(1, mapSite.recursionSize());
-    EXPECT_EQ(2, mapSite.num_sites(0));
-    EXPECT_EQ(-1, mapSite.num_corners(0));
-
-    mapSite.push_site(1, 11);
-    mapSite.push_site(1, 12);
-    mapSite.push_site(1, 11);     // Will make no difference as array already contains this value.
-    mapSite.push_site(1, 13);
-    EXPECT_EQ(2, mapSite.recursionSize());
-    EXPECT_EQ(2, mapSite.num_sites(0));
-    EXPECT_EQ(-1, mapSite.num_corners(0));
-    EXPECT_EQ(3, mapSite.num_sites(1));
-
-    // Try deeper recursion level without lower.
-    MapSite mapSite2 = {};
-    mapSite2.push_site(2, 21);
-    mapSite2.push_site(1, 12);
-    EXPECT_EQ(3, mapSite2.recursionSize());
-    EXPECT_EQ(0, mapSite2.num_sites(0));
-    EXPECT_EQ(1, mapSite2.num_sites(2));
-    EXPECT_EQ(1, mapSite2.num_sites(1));
-}
-
-TEST_F(MapSiteTest, CoordinatesToKey) {
-    MapSite mapSite = {};
-    mapSite.x = 100;
-    mapSite.y = 200;
-    float x, y;
-    KeyToCoord(mapSite.coord(), x, y);
+TEST_F(MapNodeTest, InitialiseBottomLevel) {
+    MapNode rootSite(Point(50,50), 0);
     
-    EXPECT_FLOAT_EQ(mapSite.x, x);
-    EXPECT_FLOAT_EQ(mapSite.y, y);
+    //ASSERT_NEAR(0.0, mapSite.x, MAP_MIN_RES/2);
+    EXPECT_EQ(rootSite.coordinates,     Point(50,50));
+    EXPECT_EQ(rootSite.parent,          Point(0,0));
+    EXPECT_EQ(rootSite.minRecursion,    0);
+    EXPECT_EQ(rootSite.getMaxRecursion(), -1);
+    EXPECT_EQ(rootSite.numSite(0), -1);
+    EXPECT_EQ(rootSite.numCorner(0), -1);
+
+    EXPECT_EQ(rootSite.setHeight(0, 1), 1);
+    EXPECT_EQ(rootSite.getHeight(0), 1);
+    EXPECT_EQ(rootSite.getMaxRecursion(), 0);
+    EXPECT_EQ(rootSite.numSite(0), 0);
+    EXPECT_EQ(rootSite.numCorner(0), 0);
+
+    EXPECT_EQ(rootSite.pushSite(0, Point(0,0)), 1);
+    EXPECT_EQ(rootSite.pushCorner(0, Point(0,0)), 1);
+    EXPECT_EQ(rootSite.getMaxRecursion(), 0);
+
+    EXPECT_EQ(rootSite.pushSite(0, Point(0,0)), 1);     // As the underlying container is a set, this will not increase the output number.
+    EXPECT_EQ(rootSite.pushSite(0, Point(1,0)), 2);
+    EXPECT_EQ(rootSite.pushSite(0, Point(0,1)), 3);
+    EXPECT_EQ(rootSite.getMaxRecursion(), 0);
+
+    EXPECT_EQ(rootSite.numSite(0), 3);
+    EXPECT_EQ(rootSite.numCorner(0), 1);
+    EXPECT_EQ(rootSite.numSite(1), -1);
+    EXPECT_EQ(rootSite.numCorner(1), -1);
+
+    EXPECT_EQ(1, rootSite.pushSite(1, Point(0,0)));
+    EXPECT_EQ(1, rootSite.numSite(1));
+    EXPECT_EQ(0, rootSite.numCorner(1));
+    EXPECT_EQ(0, rootSite.getHeight(1));
+    EXPECT_EQ(1, rootSite.getMaxRecursion());
+}
+
+TEST_F(MapNodeTest, InitialiseHigherLevel) {
+    MapNode rootSite(Point(50,50), 0);
+    MapNode childSite(Point(10,10), rootSite.coordinates, 1);
+
+    EXPECT_EQ(Point(10,10), childSite.coordinates);
+    EXPECT_EQ(Point(50,50), childSite.parent);
+    EXPECT_EQ(1, childSite.minRecursion);
+    EXPECT_EQ(-1, childSite.getMaxRecursion());
+    EXPECT_EQ(-1, childSite.numSite(0));
+    EXPECT_EQ(-1, childSite.numCorner(0));
+
+    EXPECT_EQ(-1, childSite.setHeight(0, 1));           // trying to set recursion level below minimum.
+    EXPECT_EQ(-1, childSite.pushSite(0, Point(0,0)));
+    EXPECT_EQ(-1, childSite.pushCorner(0, Point(0,0)));
+    EXPECT_EQ(-1, childSite.getMaxRecursion());
+    EXPECT_EQ(-1, childSite.numSite(0));
+    EXPECT_EQ(-1, childSite.numCorner(0));
+
+    EXPECT_EQ(17, childSite.setHeight(1, 17));
+    EXPECT_EQ(17, childSite.getHeight(1));
+    EXPECT_EQ(1, childSite.getMaxRecursion());
+    EXPECT_EQ(0, childSite.numSite(1));
+    EXPECT_EQ(0, childSite.numCorner(1));
+
+    EXPECT_EQ(1, childSite.pushSite(1, Point(1,2)));
+    EXPECT_EQ(2, childSite.pushSite(1, Point(2,2)));
+    EXPECT_EQ(1, childSite.getMaxRecursion());
+    EXPECT_EQ(17, childSite.getHeight(1));
+    EXPECT_EQ(2, childSite.numSite(1));
+    EXPECT_EQ(0, childSite.numCorner(1));
+
+    EXPECT_EQ(1, childSite.pushCorner(3, Point(1,3)));
+    EXPECT_EQ(2, childSite.pushCorner(3, Point(2,3)));
+    EXPECT_EQ(3, childSite.getMaxRecursion());
+    EXPECT_EQ(17, childSite.getHeight(1));
+    EXPECT_EQ(2, childSite.numSite(1));
+    EXPECT_EQ(0, childSite.numCorner(1));
+    EXPECT_EQ(0, childSite.getHeight(2));
+    EXPECT_EQ(0, childSite.numSite(2));
+    EXPECT_EQ(0, childSite.numCorner(2));
+    EXPECT_EQ(0, childSite.getHeight(3));
+    EXPECT_EQ(0, childSite.numSite(3));
+    EXPECT_EQ(2, childSite.numCorner(3));
+}
+
+TEST_F(MapNodeTest, Iterators) {
+    MapNode rootSite(Point(50,50), 0);
+    MapNode childSite(Point(10,10), rootSite.coordinates, 2);
+
+    EXPECT_EQ(Point(10,10), childSite.coordinates);
+    EXPECT_EQ(Point(50,50), childSite.parent);
+
+    EXPECT_EQ(1, childSite.pushCorner(3, Point(1,3)));
+    EXPECT_EQ(2, childSite.pushCorner(3, Point(2,3)));
+    EXPECT_EQ(3, childSite.pushCorner(3, Point(3,3)));
+    EXPECT_EQ(4, childSite.pushCorner(3, Point(4,3)));
+    EXPECT_EQ(5, childSite.pushCorner(3, Point(5,3)));
+    EXPECT_EQ(6, childSite.pushCorner(3, Point(6,3)));
+    EXPECT_EQ(3, childSite.getMaxRecursion());
+    EXPECT_EQ(0, childSite.numCorner(2));
+    EXPECT_EQ(6, childSite.numCorner(3));
+    int lastX = 0;
+    for(auto it = childSite.beginCorner(3); it != childSite.endCorner(3); ++it){
+        EXPECT_EQ(lastX +1, it->x());
+        lastX = it->x();
+        EXPECT_EQ(3, it->y());
+    }
+
+    for(auto it = childSite.beginSite(3); it != childSite.endSite(3); ++it){
+        EXPECT_EQ(1, 2);    // we should never fail here because sites[3] is empty.
+    }
+}
+
+TEST_F(MapNodeTest, Point){
+    Point p(10.1,10.9);
+    EXPECT_EQ(10, p.x());
+    EXPECT_EQ(10, p.y());
+
+    p.x(10.999999);
+    EXPECT_EQ(10, p.x());
+
+    p.x(10.99999999999999999999999999);
+    EXPECT_EQ(11, p.x());
+
+    EXPECT_EQ(p, p);
+    EXPECT_TRUE((p == p));
+    EXPECT_FALSE((p == Point(100,1000)));
 }
 
 
-TEST_F(MapSiteTest, Sorting) {
-    MapSite generateCoords = {};
+class MapContainerTest : public ::testing::Test {
+    virtual void TearDown() {
+        MapData mapData(true);      // call without initialising points.
+        mapData.MapContainer.clear();
+    }
+};
 
-    generateCoords.x = 999;
-    generateCoords.y = 1100;
-    int64_t c_0999_1100 = generateCoords.coord();
+TEST_F(MapContainerTest, MapHashing){
+    Point p0(0, 0);
+    Point p1(MAP_SIZE, 0);
 
-    generateCoords.x = 1000;
-    generateCoords.y = 1100;
-    int64_t c_1000_1100 = generateCoords.coord();
+    pairHash ph;
 
-    generateCoords.x = 1001;
-    generateCoords.y = 1100;
-    int64_t c_1001_1100 = generateCoords.coord();
+    EXPECT_EQ(0, ph.operator()(p0));
+    EXPECT_NE(0, ph.operator()(p1));
+}
 
-    generateCoords.x = 1100;
-    generateCoords.y = 1100;
-    int64_t c_1100_1100 = generateCoords.coord();
+TEST_F(MapContainerTest, Init){
+    MapData mapData(true);      // call without initialising points.
 
-    generateCoords.x = 1100;
-    generateCoords.y = 1050;
-    int64_t c_1100_1050 = generateCoords.coord();
+    Point p(1, 2);
+    MapNode m(p, 0);
 
-    generateCoords.x = 1100;
-    generateCoords.y = 1000;
-    int64_t c_1100_1000 = generateCoords.coord();
+    EXPECT_EQ(0, mapData.count(p));
+    mapData.insert(m);
+    EXPECT_EQ(1, mapData.count(p));
+    EXPECT_EQ(p, mapData.find(p)->first);
+}
 
-    generateCoords.x = 1100;
-    generateCoords.y = 900;
-    int64_t c_1100_0900 = generateCoords.coord();
-
-    generateCoords.x = 999;
-    generateCoords.y = 900;
-    int64_t c_0999_0900 = generateCoords.coord();
-
-    generateCoords.x = 1000;
-    generateCoords.y = 900;
-    int64_t c_1000_0900 = generateCoords.coord();
-
-    generateCoords.x = 1001;
-    generateCoords.y = 900;
-    int64_t c_1001_0900 = generateCoords.coord();
-
-    generateCoords.x = 900;
-    generateCoords.y = 900;
-    int64_t c_0900_0900 = generateCoords.coord();
-
-    generateCoords.x = 900;
-    generateCoords.y = 1000;
-    int64_t c_0900_1000 = generateCoords.coord();
-
-    generateCoords.x = 900;
-    generateCoords.y = 1100;
-    int64_t c_0900_1100 = generateCoords.coord();
-
-    MapSite mapSite = {};
-    mapSite.x = 1000;
-    mapSite.y = 1000;
-
-    /*std::cout << "c_1000_1100 " << c_1000_1100 << "\n";
-    std::cout << "c_1001_1100 " << c_1001_1100 << "\n";
-    std::cout << "c_1100_1100 " << c_1100_1100 << "\n";
-    std::cout << "c_1100_1050 " << c_1100_1050 << "\n";
-    std::cout << "c_1100_1000 " << c_1100_1000 << "\n";
-    std::cout << "c_1100_0900 " << c_1100_0900 << "\n";
-    std::cout << "c_1000_0900 " << c_1000_0900 << "\n";
-    std::cout << "c_0999_0900 " << c_0999_0900 << "\n";
-    std::cout << "c_0900_0900 " << c_0900_0900 << "\n";
-    std::cout << "c_0900_1000 " << c_0900_1000 << "\n";
-    std::cout << "c_0900_1100 " << c_0900_1100 << "\n";
-    std::cout << "c_0999_1100 " << c_0999_1100 << "\n";*/
-
-
-    mapSite.push_site(0, c_1100_1050);
-    mapSite.push_site(0, c_0999_1100);
-    mapSite.push_site(0, c_0900_1100);
-    mapSite.push_site(0, c_0999_0900);
-    mapSite.push_site(0, c_1100_1100);
-    mapSite.push_site(0, c_1000_1100);
-    mapSite.push_site(0, c_0900_0900);
-    mapSite.push_site(0, c_1000_1100);
-    mapSite.push_site(0, c_1001_1100);
-    mapSite.push_site(0, c_1100_1100);
-    mapSite.push_site(0, c_0999_1100);
-    mapSite.push_site(0, c_1001_0900);
-    mapSite.push_site(0, c_0900_1100);
-    mapSite.push_site(0, c_0900_1000);
-    mapSite.push_site(0, c_1000_0900);
-    mapSite.push_site(0, c_1100_0900); 
-    mapSite.push_site(0, c_1100_1000);
-    mapSite.push_site(0, c_0999_0900);
-
-
-    std::set<int64_t, CompCoord>::iterator it = mapSite.site_begin(0);
+TEST_F(MapContainerTest, IterateCoords){
+    MapData mapData(true);      // call without initialising points.
     
+    EXPECT_EQ(0, mapData.MapContainer.size());
 
-    EXPECT_EQ(c_1000_1100, *it);
+    mapData.insert(MapNode(Point(0,1), 0));
+    mapData.insert(MapNode(Point(0,2), 0));
+    mapData.insert(MapNode(Point(0,3), 0));
+    mapData.insert(MapNode(Point(0,4), 0));
+
+    EXPECT_EQ(4, mapData.MapContainer.size());
+
+    MapType::iterator it = mapData.MapContainer.begin();
+    EXPECT_EQ(1, it->first.y());
     ++it;
-    EXPECT_EQ(c_1001_1100, *it);
+    EXPECT_EQ(2, it->first.y());
     ++it;
-    EXPECT_EQ(c_1100_1100, *it);
+    EXPECT_EQ(3, it->first.y());
     ++it;
-    EXPECT_EQ(c_1100_1050, *it);
-    ++it;
-    EXPECT_EQ(c_1100_1000, *it);
-    ++it;
-    EXPECT_EQ(c_1100_0900, *it);
-    ++it;
-    EXPECT_EQ(c_1001_0900, *it);
-    ++it;
-    EXPECT_EQ(c_1000_0900, *it);
-    ++it;
-    EXPECT_EQ(c_0999_0900, *it);
-    ++it;
-    EXPECT_EQ(c_0900_0900, *it);
-    ++it;
-    EXPECT_EQ(c_0900_1000, *it);
-    ++it;
-    EXPECT_EQ(c_0900_1100, *it);
-    ++it;
-    EXPECT_EQ(c_0999_1100, *it);
-    ++it;
+    EXPECT_EQ(4, it->first.y());
+
+    key_iterator it2 = mapData.MapContainer.begin();
+    EXPECT_EQ(1, it2->y());
+    ++it2;
+    EXPECT_EQ(2, it2->y());
+    ++it2;
+    EXPECT_EQ(3, it2->y());
+    ++it2;
+    EXPECT_EQ(4, it2->y());
+
+    auto it3 = mapData.begin();
+    EXPECT_EQ(1, it3->y());
+    ++it3;
+    EXPECT_EQ(2, it3->y());
+    ++it3;
+    EXPECT_EQ(3, it3->y());
+    ++it3;
+    EXPECT_EQ(4, it3->y());
+    ++it3;
+    EXPECT_EQ(mapData.end(), it3);
 }
 
-TEST_F(MapSiteTest, SortingMultipleSite) {
-    std::unordered_map<int64_t, struct MapSite> container;
-
-    for(int i = 0; i < 1000; ++i){
-        float x = rand() % 9900 + 100;
-        float y = rand() % 9900 + 100;
-        MapSite generateCoords = {};
-
-        generateCoords.x = x + 0;
-        generateCoords.y = y + 100;
-        int64_t c_000_100 = generateCoords.coord();
-
-        generateCoords.x = x + 100;
-        generateCoords.y = y + 100;
-        int64_t c_100_100 = generateCoords.coord();
-
-        generateCoords.x = x + 100;
-        generateCoords.y = y + 0;
-        int64_t c_100_000 = generateCoords.coord();
-
-        generateCoords.x = x + 100;
-        generateCoords.y = y + -100;
-        int64_t c_100m100 = generateCoords.coord();
-
-        generateCoords.x = x + 0;
-        generateCoords.y = y + -100;
-        int64_t c_000m100 = generateCoords.coord();
-
-        generateCoords.x = x + -100;
-        generateCoords.y = y + -100;
-        int64_t cm100m100 = generateCoords.coord();
-
-        generateCoords.x = x + -100;
-        generateCoords.y = y + 0;
-        int64_t cm100_000 = generateCoords.coord();
-
-        generateCoords.x = x + -100;
-        generateCoords.y = y + 100;
-        int64_t cm100_100 = generateCoords.coord();
-
-        MapSite mapSite = {};
-        mapSite.x = x;
-        mapSite.y = y;
-
-        mapSite.push_site(0, cm100_000);
-        mapSite.push_site(0, c_000_100);
-        mapSite.push_site(0, c_000m100);
-        mapSite.push_site(0, cm100m100);
-        mapSite.push_site(0, c_100_000);
-        mapSite.push_site(0, c_100m100);
-        mapSite.push_site(0, cm100_100);
-        mapSite.push_site(0, c_100_100);
-
-        container[mapSite.coord()] = mapSite;
-    }
-
-    for(auto it = container.begin(); it != container.end(); ++it){
-        float x = it->second.x;
-        float y = it->second.y;
-
-        MapSite testCoords = {};
-
-        std::set<int64_t>::iterator site_it = it->second.site_begin(0);
-
-        testCoords.x = x + 0;
-        testCoords.y = y + 100;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-        
-        ++site_it;
-        testCoords.x = x + 100;
-        testCoords.y = y + 100;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-
-        ++site_it;
-        testCoords.x = x + 100;
-        testCoords.y = y + 0;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-     
-        ++site_it;
-        testCoords.x = x + 100;
-        testCoords.y = y + -100;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-     
-        ++site_it;
-        testCoords.x = x + 0;
-        testCoords.y = y + -100;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-     
-        ++site_it;
-        testCoords.x = x + -100;
-        testCoords.y = y + -100;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-     
-        ++site_it;
-        testCoords.x = x + -100;
-        testCoords.y = y + 0;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-     
-        ++site_it;
-        testCoords.x = x + -100;
-        testCoords.y = y + 100;
-        EXPECT_EQ(testCoords.coord(), *site_it);
-    }
-}
-
-TEST_F(MapSiteTest, SortingMultipleCorner) {
-    std::unordered_map<int64_t, struct MapSite> container;
-
-    for(int i = 0; i < 1000; ++i){
-        float x = rand() % 9900 + 100;
-        float y = rand() % 9900 + 100;
-        MapSite generateCoords = {};
-
-        generateCoords.x = x + 0;
-        generateCoords.y = y + 100;
-        int64_t c_000_100 = generateCoords.coord();
-
-        generateCoords.x = x + 100;
-        generateCoords.y = y + 100;
-        int64_t c_100_100 = generateCoords.coord();
-
-        generateCoords.x = x + 100;
-        generateCoords.y = y + 0;
-        int64_t c_100_000 = generateCoords.coord();
-
-        generateCoords.x = x + 100;
-        generateCoords.y = y + -100;
-        int64_t c_100m100 = generateCoords.coord();
-
-        generateCoords.x = x + 0;
-        generateCoords.y = y + -100;
-        int64_t c_000m100 = generateCoords.coord();
-
-        generateCoords.x = x + -100;
-        generateCoords.y = y + -100;
-        int64_t cm100m100 = generateCoords.coord();
-
-        generateCoords.x = x + -100;
-        generateCoords.y = y + 0;
-        int64_t cm100_000 = generateCoords.coord();
-
-        generateCoords.x = x + -100;
-        generateCoords.y = y + 100;
-        int64_t cm100_100 = generateCoords.coord();
-
-        MapSite mapSite = {};
-        mapSite.x = x;
-        mapSite.y = y;
-
-        mapSite.push_corner(0, cm100_000);
-        mapSite.push_corner(0, c_000_100);
-        mapSite.push_corner(0, c_000m100);
-        mapSite.push_corner(0, cm100m100);
-        mapSite.push_corner(0, c_100_000);
-        mapSite.push_corner(0, c_100m100);
-        mapSite.push_corner(0, cm100_100);
-        mapSite.push_corner(0, c_100_100);
-
-        container[mapSite.coord()] = mapSite;
-    }
-
-    for(auto it = container.begin(); it != container.end(); ++it){
-        float x = it->second.x;
-        float y = it->second.y;
-
-        MapSite testCoords = {};
-
-        std::set<int64_t>::iterator corner_it = it->second.corner_begin(0);
-
-        testCoords.x = x + 0;
-        testCoords.y = y + 100;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-
-        ++corner_it;
-        testCoords.x = x + 100;
-        testCoords.y = y + 100;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-
-        ++corner_it;
-        testCoords.x = x + 100;
-        testCoords.y = y + 0;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-
-        ++corner_it;
-        testCoords.x = x + 100;
-        testCoords.y = y + -100;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-
-        ++corner_it;
-        testCoords.x = x + 0;
-        testCoords.y = y + -100;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-
-        ++corner_it;
-        testCoords.x = x + -100;
-        testCoords.y = y + -100;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-
-        ++corner_it;
-        testCoords.x = x + -100;
-        testCoords.y = y + 0;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-
-        ++corner_it;
-        testCoords.x = x + -100;
-        testCoords.y = y + 100;
-        EXPECT_EQ(testCoords.coord(), *corner_it);
-    }
-}
-
-TEST_F(MapSiteTest, CountSite) {
-    MapSite mapSite = {};
-
-    mapSite.push_site(0, 1);
-    EXPECT_EQ(mapSite.site_count(0, 1), 1);
-    EXPECT_EQ(mapSite.site_count(0, 2), 0);
-    EXPECT_EQ(mapSite.site_count(1, 1), -1);
-
-    mapSite.push_site(0, 2);
-    EXPECT_EQ(mapSite.site_count(0, 1), 1);
-    EXPECT_EQ(mapSite.site_count(0, 2), 1);
-    EXPECT_EQ(mapSite.site_count(0, 3), 0);
-    EXPECT_EQ(mapSite.site_count(1, 1), -1);
-
-    mapSite.push_site(1, 1);
-    EXPECT_EQ(mapSite.site_count(0, 1), 1);
-    EXPECT_EQ(mapSite.site_count(0, 2), 1);
-    EXPECT_EQ(mapSite.site_count(0, 3), 0);
-    EXPECT_EQ(mapSite.site_count(1, 1), 1);
-    EXPECT_EQ(mapSite.site_count(1, 2), 0);
-    EXPECT_EQ(mapSite.site_count(2, 1), -1);
-
-    mapSite.push_site(3, 1);
-    EXPECT_EQ(mapSite.site_count(0, 1), 1);
-    EXPECT_EQ(mapSite.site_count(0, 2), 1); 
-    EXPECT_EQ(mapSite.site_count(0, 3), 0); 
-    EXPECT_EQ(mapSite.site_count(1, 1), 1);
-    EXPECT_EQ(mapSite.site_count(1, 2), 0);
-    EXPECT_EQ(mapSite.site_count(2, 1), 0);
-    EXPECT_EQ(mapSite.site_count(3, 1), 1);
-    EXPECT_EQ(mapSite.site_count(3, 2), 0);
-    EXPECT_EQ(mapSite.site_count(4, 1), -1);
-}
-
-TEST_F(MapSiteTest, CountCorner) {
-    MapSite mapSite = {};
-
-    mapSite.push_corner(0, 1);
-    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
-    EXPECT_EQ(mapSite.corner_count(0, 2), 0);
-    EXPECT_EQ(mapSite.corner_count(1, 1), -1);
-
-    mapSite.push_corner(0, 2);
-    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
-    EXPECT_EQ(mapSite.corner_count(0, 2), 1);
-    EXPECT_EQ(mapSite.corner_count(0, 3), 0);
-    EXPECT_EQ(mapSite.corner_count(1, 1), -1);
-
-    mapSite.push_corner(1, 1);
-    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
-    EXPECT_EQ(mapSite.corner_count(0, 2), 1); 
-    EXPECT_EQ(mapSite.corner_count(0, 3), 0); 
-    EXPECT_EQ(mapSite.corner_count(1, 1), 1);
-    EXPECT_EQ(mapSite.corner_count(1, 2), 0);
-    EXPECT_EQ(mapSite.corner_count(2, 1), -1);
-
-    mapSite.push_corner(3, 1);
-    EXPECT_EQ(mapSite.corner_count(0, 1), 1);
-    EXPECT_EQ(mapSite.corner_count(0, 2), 1); 
-    EXPECT_EQ(mapSite.corner_count(0, 3), 0); 
-    EXPECT_EQ(mapSite.corner_count(1, 1), 1);
-    EXPECT_EQ(mapSite.corner_count(1, 2), 0);
-    EXPECT_EQ(mapSite.corner_count(2, 1), 0);
-    EXPECT_EQ(mapSite.corner_count(3, 1), 1);
-    EXPECT_EQ(mapSite.corner_count(3, 2), 0);
-    EXPECT_EQ(mapSite.corner_count(4, 1), -1);
-
-    mapSite.push_corner(3, (int64_t)6072899082123057);
-    EXPECT_EQ(mapSite.corner_count(3, (int64_t)6072899082123057), 1);
-}
 
 }  // namespace
 
