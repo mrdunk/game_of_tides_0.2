@@ -73,7 +73,7 @@ private:
 	bool						m_bLMouseDown, m_bRMouseDown;
 	bool						m_bSettingsMode;
 
-    MapData                        data;
+    MapData                     data;
 };
 
 //|||||||||||||||||||||||||||||||||||||||||||||||

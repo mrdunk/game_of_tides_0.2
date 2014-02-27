@@ -1,5 +1,7 @@
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
+#include <OgreTextureManager.h>
+
 #include "AdvancedOgreFramework.hpp"
 
 //|||||||||||||||||||||||||||||||||||||||||||||||

@@ -238,6 +238,10 @@ TEST_F(MapContainerTest, IterateCoords){
     EXPECT_EQ(mapData.end(), it3);
 }
 
+TEST_F(MapContainerTest, MapData){
+    MapData mapData(false);
+}
+
 
 }  // namespace
 

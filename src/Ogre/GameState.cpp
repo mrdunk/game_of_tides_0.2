@@ -1,4 +1,9 @@
 //|||||||||||||||||||||||||||||||||||||||||||||||
+#include <OgreManualObject.h>
+#include <OgreMesh.h>
+#include <OgreSceneNode.h>
+#include <OgreStaticGeometry.h>
+#include <OgreTechnique.h>
 
 #include "GameState.hpp"
 #include <utility>      // std::pair, std::make_pair

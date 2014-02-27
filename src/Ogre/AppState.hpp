@@ -4,6 +4,7 @@
 #define APP_STATE_HPP
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
+#include <OgreFrameListener.h>
 
 #include "AdvancedOgreFramework.hpp"
 

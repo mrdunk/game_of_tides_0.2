@@ -12,13 +12,16 @@
 #include <vector>
 #include <set>
 
-#include "../voronoi/boost/polygon/polygon.hpp"
-//#include <boost/polygon/polygon.hpp>
-#include "../voronoi/boost/polygon/voronoi.hpp"
-using voronoi::polygon::voronoi_builder;
-using voronoi::polygon::voronoi_diagram;
+//#include "../voronoi/boost/polygon/polygon.hpp"
+#include <boost/polygon/polygon.hpp>
+//#include "../voronoi/boost/polygon/voronoi.hpp"
+#include <boost/polygon/voronoi.hpp>
+//using voronoi::polygon::voronoi_builder;
+//using voronoi::polygon::voronoi_diagram;
+using boost::polygon::voronoi_builder;
+using boost::polygon::voronoi_diagram;
 
-#define MAP_NUM_POINTS  1000//0//0
+#define MAP_NUM_POINTS  1000//000
 #define MAP_SIZE        100000000
 #define MAP_MIN_RES     100
 
@@ -34,7 +37,7 @@ class MapNode;
 class pairHash;
 
 //typedef boost::polygon::polygon_data<int> Polygon;
-typedef voronoi::polygon::point_data<int> Point;
+typedef boost::polygon::point_data<int> Point;
 typedef std::unordered_map<Point, MapNode, pairHash> MapType;
 //typedef MapType::iterator MapTypeIter;
 
@@ -95,8 +98,8 @@ class key_iterator : public MapType::iterator{
 
 class MapData{
     public:
-        MapData(bool testing){ /* This initiator is only used by the unit tests. */ };
-        MapData(void);
+        MapData(bool testing);
+        MapData(void){MapData(false);};
         
         // Main container for all map data.
         static MapType MapContainer;

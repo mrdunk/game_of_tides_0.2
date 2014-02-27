@@ -105,8 +105,6 @@ set(HDRS
     ./src/Ogre/MenuState.hpp
     ./src/Ogre/PauseState.hpp
     ./src/data/data.h
-    ./src/Voronoi/voronoi.h
-    ./src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.h
 )
  
 set(SRCS
@@ -119,8 +117,6 @@ set(SRCS
     ./src/Ogre/PauseState.cpp
     ./src/Ogre/AdvancedOgreFramework.cpp
     ./src/data/data.cpp
-    ./src/Voronoi/voronoi.cpp
-    ./src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp
 )
  
 include_directories( ${OIS_INCLUDE_DIRS}

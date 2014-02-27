@@ -162,23 +162,26 @@ bool MapNode::isInside(int recursion, Point point){
 
 std::unordered_map<Point, struct MapNode, pairHash> MapData::MapContainer;
 
-MapData::MapData(void){
-    Point rootPoint(0,0);
-    Point insertPoint;
+MapData::MapData(bool testing){
+    if(!testing){
+        Point rootPoint(0,0);
+        Point insertPoint;
 
-    std::vector<Point> points;
+        std::vector<Point> points;
 
-    for (int i = 0; i < MAP_NUM_POINTS; ++i){
-        insertPoint.x((int)(rand() % MAP_SIZE));
-        insertPoint.y((int)(rand() % MAP_SIZE));
-        
-        insert(MapNode(insertPoint, rootPoint, 0));
-        points.push_back(insertPoint);
+        for (int i = 0; i < MAP_NUM_POINTS; ++i){
+            insertPoint.x((int)(rand() % MAP_SIZE));
+            insertPoint.y((int)(rand() % MAP_SIZE));
+
+            insert(MapNode(insertPoint, rootPoint, 0));
+            points.push_back(insertPoint);
+        }
+        cout << points.size() << "\n";
+
+        voronoi_diagram<double> vd;
+        //construct_voronoi((std::vector<Point>::iterator)MapContainer.begin(), (std::vector<Point>::iterator)MapContainer.end(), &vd);
+        construct_voronoi(points.begin(), points.end(), &vd);
     }
-
-    voronoi_diagram<double> vd;
-    //construct_voronoi((std::vector<Point>::iterator)MapContainer.begin(), (std::vector<Point>::iterator)MapContainer.end(), &vd);
-    construct_voronoi(points.begin(), points.end(), &vd);
 }
 
 void MapData::insert(MapNode node){
