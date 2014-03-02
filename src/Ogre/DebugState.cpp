@@ -102,8 +102,101 @@ void DebugState::exit()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void DebugState::createScene()
-{
+void DebugState::viewBox(ManualObject* manual_lines){
+    float lowX, lowY, highX, highY;
+    calculateViewedMap(lowX, lowY, highX, highY);
+    cout << lowX << "," << lowY << "\t" << highX << "," << highY << "\n";
+    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, lowY), Ogre::Vector3(lowX, 10, highY));
+    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, highY), Ogre::Vector3(highX, 10, highY));
+    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(highX, 10, highY), Ogre::Vector3(highX, 10, lowY));
+    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(highX, 10, lowY), Ogre::Vector3(lowX, 10, lowY));
+    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, lowY), Ogre::Vector3(highX, 10, highY));
+    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, highY), Ogre::Vector3(highX, 10, lowY));
+}
+
+void DebugState::drawUniqueLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
+    if(pointA.x < pointB.x) return;
+    if(pointA.x == pointB.x and pointA.y < pointB.y) return;
+    drawLine(mo, colour, pointA, pointB);
+}
+
+void DebugState::viewCell(ManualObject* manual_lines){
+    cout << "DebugState::viewCell....\n";
+    
+    //int count = 0;
+    
+    const int recursion = 0;
+    Vector3 site0, site1;
+    for(auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
+        if(it->second.type == TYPE_SITE){
+            //cout << it->second.numSite(recursion) << "\n";
+            site0 = Vector3(it->first.x() / MAP_MIN_RES, 0, it->first.y() / MAP_MIN_RES);
+            if(it->second.numCorner(recursion) > 0){
+                for(auto itSite = it->second.beginSite(recursion); itSite != it->second.endSite(recursion); ++itSite){
+                    site1 = Vector3(itSite->x() / MAP_MIN_RES, 0, itSite->y() / MAP_MIN_RES);
+                    drawUniqueLine(manual_lines, ColourValue(0,1,0), site0, site1);
+                }
+            }
+            //if(++count > 50) return;
+        }
+    }
+    cout << "...done\n";
+}
+
+void DebugState::viewCell2(ManualObject* manual_lines){
+    cout << "DebugState::viewCell....\n";
+
+    //int count = 0;
+
+    const int recursion = 0;
+    Vector3 site, corner, previousCorner, firstCorner;
+    bool started;
+    for(auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
+        if(it->second.type == TYPE_SITE){
+            if(it->second.numCorner(recursion) > 0){
+                started = false;
+                for(auto itCorner = it->second.beginCorner(recursion); itCorner != it->second.endCorner(recursion); ++itCorner){
+                    corner = Vector3(itCorner->x() / MAP_MIN_RES, 0, itCorner->y() / MAP_MIN_RES);
+                    if(!started){
+                        started = true;
+                        firstCorner = corner;
+                    } else {
+                        drawUniqueLine(manual_lines, ColourValue(1,0,0), previousCorner, corner);
+                    }
+
+                    previousCorner = corner;
+                }
+                drawUniqueLine(manual_lines, ColourValue(1,0,0), previousCorner, firstCorner);
+            }
+            //if(++count > 50) return;
+        }
+    }
+    cout << "...done\n";
+}
+
+
+void DebugState::addLines(const String name, void(DebugState::*p_function)(ManualObject*)){
+    ManualObject* manual_lines;
+    try{
+        manual_lines = m_pSceneMgr->getManualObject(name);
+        SceneNode* parent = manual_lines->getParentSceneNode();
+        parent->detachObject(manual_lines);
+        m_pSceneMgr->destroySceneNode(parent->getName());
+        manual_lines->clear();
+    } catch (Ogre::Exception ex) {
+        manual_lines = m_pSceneMgr->createManualObject(name);
+    }
+
+    manual_lines->begin("SolidColour", Ogre::RenderOperation::OT_LINE_LIST);
+
+    (this->*p_function)(manual_lines);
+
+    manual_lines->end();
+
+    m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual_lines);
+}
+
+void DebugState::createScene(){
     Ogre::Light* directionalLight = m_pSceneMgr->createLight("Light");
     directionalLight->setType(Ogre::Light::LT_DIRECTIONAL);
     directionalLight->setDiffuseColour(Ogre::ColourValue(.8, .8, .8));
@@ -112,30 +205,35 @@ void DebugState::createScene()
 
 
     initMaterial();
+
+    addLines("screenOutline", &DebugState::viewBox);
+    addLines("cells", &DebugState::viewCell);
+    addLines("cells2", &DebugState::viewCell2);
     
-    ManualObject* manual_planes = m_pSceneMgr->createManualObject("MapPoly");
-    ManualObject* manual_lines = m_pSceneMgr->createManualObject("MapLine");
-    generateScenery(manual_planes, manual_lines);
-   
-    manual_planes->convertToMesh("test.mesh.planes");
-    Entity *ent1 = m_pSceneMgr->createEntity("planes", "test.mesh.planes");
-    cout << "manual_planes size: " << ent1->getMesh()->getSize() << "\n";
+//    ManualObject* manual_planes = m_pSceneMgr->createManualObject("MapPoly");
+//    ManualObject* manual_lines = m_pSceneMgr->createManualObject("MapLine");
+    
+    //generateScenery(manual_planes, manual_lines);
+    //manual_planes->convertToMesh("test.mesh.planes");
+    //Entity *ent1 = m_pSceneMgr->createEntity("planes", "test.mesh.planes");
+    //cout << "manual_planes size: " << ent1->getMesh()->getSize() << "\n";
+
 //    m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(ent1);
 
-    if(manual_lines->getNumSections() > 0){
+/*    if(manual_lines->getNumSections() > 0){
         manual_lines->convertToMesh("test.mesh.lines");
         Entity *ent2 = m_pSceneMgr->createEntity("lines", "test.mesh.lines");
         m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(ent2);
         ent2->setVisible(false);
         cout << "manual_lines size: " << ent2->getMesh()->getSize() << "\n";
     }
+*/
 
-
-//    return;
+    return;
 
 
     // Create Static Geometry.
-    m_pSceneMgr->destroyAllStaticGeometry();
+/*    m_pSceneMgr->destroyAllStaticGeometry();
     Ogre::StaticGeometry *sg = m_pSceneMgr->createStaticGeometry("WorldMapArea");
 
     sg->setRegionDimensions(Ogre::Vector3(MAP_SIZE, MAP_SIZE, MAP_SIZE));
@@ -146,7 +244,7 @@ void DebugState::createScene()
     sg->addEntity(ent1, Ogre::Vector3(0,0,0), rot0, Ogre::Vector3(1,1,1));
 
     sg->build();
-
+*/
 }
 
 void DebugState::initMaterial(void){
@@ -168,33 +266,6 @@ void DebugState::initMaterial(void){
 }
 
 void DebugState::generateScenery(ManualObject* manual_planes, ManualObject* manual_lines){
-    manual_planes->begin("SolidColour", RenderOperation::OT_TRIANGLE_LIST);
-    manual_lines->begin("SolidColour", Ogre::RenderOperation::OT_LINE_LIST);
-
-    //drawLine(manual_lines, Ogre::Vector3(0, 2000, 0), Ogre::Vector3(MAP_SIZE/2, 2000, MAP_SIZE/2));
-    int count = 0;
-    for (auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
-        if(it->second.type == TYPE_SITE){
-            // Only do this stuff for sites. (We'd get it twice if we did it for corners as well.)
-            ++count;
-            if(count > 500000){
-                cout << "clearing\n";
-                count = 0;
-                manual_lines->end();
-                manual_lines->clear();
-                manual_lines->begin("SolidColour", Ogre::RenderOperation::OT_LINE_LIST);
-
-                //break;
-            }
-            drawHill(manual_planes, manual_lines, &(it->second));
-        }
-    }
-    std::cout << "done drawHill\n";
-    manual_planes->end();
-    manual_lines->end();
-    std::cout << count << " hills.\n";
-    std::cout << manual_lines->getNumSections() << " manual_lines\n";
-    std::cout << manual_planes->getNumSections() << " manual_planes\n";
 }
 
 
@@ -206,41 +277,38 @@ Ogre::ColourValue DebugState::colour(int cornerHeight, int terrain){
 void DebugState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre){
 }
 
-void DebugState::drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
-    mo->position(Ogre::Vector3(pointA.x, pointA.y + 10, pointA.z));
-    mo->position(Ogre::Vector3(pointB.x, pointB.y + 10, pointB.z));
+void DebugState::drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
+    mo->colour(colour);
+    mo->normal(0,1,0);
+    mo->position(Ogre::Vector3(pointA.x, pointA.y, pointA.z));
+    mo->position(Ogre::Vector3(pointB.x, pointB.y, pointB.z));
 }
 
 
 void DebugState::calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY){
-    // This plane sits 1/10th of the way from the camera to the surface because the full distance is out of range of the getCameraToViewportRay calculations.
-    Plane worldPlane(Ogre::Vector3::UNIT_Y, 900 * Ogre::Vector3(0,m_pCamera->getPosition().y / 1000 ,0));
+    Plane worldPlane(Ogre::Vector3::UNIT_Y, Ogre::Vector3(0, 0, 0));
 
-    Ogre::Ray rayCentre, rayTL, rayBR;
-    m_pCamera->getCameraToViewportRay(0.5, 0.5, &rayCentre);
+//    Ogre::Ray rayCentre;
+    Ogre::Ray rayTL, rayBR;
+//    m_pCamera->getCameraToViewportRay(0, 0, &rayCentre);
     m_pCamera->getCameraToViewportRay(0, 1, &rayTL);
     m_pCamera->getCameraToViewportRay(1, 0, &rayBR);
 
     std::pair<bool, Ogre::Real > resultCentre, resultTL, resultBR;
-    resultCentre = rayCentre.intersects(worldPlane);
+//    resultCentre = rayCentre.intersects(worldPlane);
     resultTL = rayTL.intersects(worldPlane);
     resultBR = rayBR.intersects(worldPlane);
 
-
-    if(resultCentre.first and resultTL.first and resultBR.first){
+    //if(resultCentre.first and resultTL.first and resultBR.first){
         //we intersect with the plane
-        Ogre::Vector3 pCentre = rayCentre.getPoint(resultCentre.second);
+//        Ogre::Vector3 pCentre = rayCentre.getPoint(resultCentre.second);
         Ogre::Vector3 pTL = rayTL.getPoint(resultTL.second);
         Ogre::Vector3 pBR = rayBR.getPoint(resultBR.second);
-        lowX = pCentre.x + ((pTL.x - pCentre.x) *10);
-        lowY = pCentre.z + ((pTL.z - pCentre.z) *10);
-        highX = pCentre.x + ((pBR.x - pCentre.x) *10);
-        highY = pCentre.z + ((pBR.z - pCentre.z) *10);
-        std::cout << "centre:\n";
-        std::cout << pCentre.x << "\t\t" << pCentre.z << "\n";
-        //std::cout << (int)lowX << "\t\t" << (int)lowY << "\n";
-        //std::cout << (int)highX << "\t\t" << (int)highY << "\n\n";
-    }
+        lowX = pTL.x;
+        lowY = pTL.z;
+        highX = pBR.x;
+        highY = pBR.z;
+    //}
 
 }
 
@@ -291,7 +359,7 @@ bool DebugState::keyPressed(const OIS::KeyEvent &keyEventRef)
         //m_bSettingsMode = !m_bSettingsMode;
         //return true;
         //Entity* line = m_pSceneMgr->getRootSceneNode()->getEntity("line");
-        Entity* lines = m_pSceneMgr->getEntity("lines");
+        ManualObject* lines = m_pSceneMgr->getManualObject("screenOutline");
         lines->setVisible(!lines->getVisible());
     }
 
@@ -310,9 +378,9 @@ bool DebugState::keyPressed(const OIS::KeyEvent &keyEventRef)
         rot2.FromAngleAxis(Ogre::Degree(-90), Ogre::Vector3::UNIT_Z);
 
         m_pCamera->setOrientation(rot1 * rot2);
-        float lowX, lowY, highX, highY;
-        calculateViewedMap(lowX, lowY, highX, highY);
-        //data.Section(lowX, lowY, highX, highY);
+        //float lowX, lowY, highX, highY;
+        //calculateViewedMap(lowX, lowY, highX, highY);
+        addLines("screenOutline", &DebugState::viewBox);
     }
 
     if(!m_bSettingsMode || (m_bSettingsMode && !OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_O)))

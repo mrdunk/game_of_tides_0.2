@@ -1,5 +1,5 @@
 /*
- * g++ -std=c++0x -isystem /home/duncan/Working/gtest-1.7.0/include/ -pthread ./main.cpp ../data.cpp ../../Voronoi/voronoi.cpp ../../Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp /home/duncan/Working/gtest-1.7.0/libgtest.a
+ * $ g++ -std=c++0x -isystem /home/duncan/Working/gtest-1.7.0/include/ -I /home/duncan/Working/git/game-of-tides_0.2/src/boost_1_55_0/ -pthread ./main.cpp ../data.cpp /home/duncan/Working/gtest-1.7.0/libgtest.a
  */
 
 #include <stdlib.h>     /* srand, rand */
@@ -174,7 +174,7 @@ class MapContainerTest : public ::testing::Test {
     }
 };
 
-TEST_F(MapContainerTest, MapHashing){
+/*TEST_F(MapContainerTest, MapHashing){
     Point p0(0, 0);
     Point p1(MAP_SIZE, 0);
 
@@ -182,7 +182,7 @@ TEST_F(MapContainerTest, MapHashing){
 
     EXPECT_EQ(0, ph.operator()(p0));
     EXPECT_NE(0, ph.operator()(p1));
-}
+}*/
 
 TEST_F(MapContainerTest, Init){
     MapData mapData(true);      // call without initialising points.
@@ -217,23 +217,14 @@ TEST_F(MapContainerTest, IterateCoords){
     ++it;
     EXPECT_EQ(4, it->first.y());
 
-    key_iterator it2 = mapData.MapContainer.begin();
-    EXPECT_EQ(1, it2->y());
-    ++it2;
-    EXPECT_EQ(2, it2->y());
-    ++it2;
-    EXPECT_EQ(3, it2->y());
-    ++it2;
-    EXPECT_EQ(4, it2->y());
-
     auto it3 = mapData.begin();
-    EXPECT_EQ(1, it3->y());
+    EXPECT_EQ(1, it3->first.y());
     ++it3;
-    EXPECT_EQ(2, it3->y());
+    EXPECT_EQ(2, it3->first.y());
     ++it3;
-    EXPECT_EQ(3, it3->y());
+    EXPECT_EQ(3, it3->first.y());
     ++it3;
-    EXPECT_EQ(4, it3->y());
+    EXPECT_EQ(4, it3->first.y());
     ++it3;
     EXPECT_EQ(mapData.end(), it3);
 }

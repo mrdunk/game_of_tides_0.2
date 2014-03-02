@@ -14,7 +14,7 @@ using namespace std;
 #define GROW_ISLAND 18 
 
 Point emptyPoint(0, 0);
-set<Point> emptySet;
+vector<Point> emptySet;
 
 void MapNode::_increaseRecursion(int recursion){
     while((int)heights.size() - 1 + minRecursion < recursion){
@@ -54,13 +54,18 @@ int MapNode::getHeight(const int recursion){
 }
 
 int MapNode::pushSite(int recursion, Point site){
+    // TODO we can probably optimize these vectors for memory usage by picking a sensible starting size.
     if(recursion < minRecursion) return -1;
 
     if((int)sites.size() -1 < recursion - minRecursion){
         _increaseRecursion(recursion);
     }
 
-    sites[recursion - minRecursion].insert(site);
+    // TODO should we alwas check for duplicate entries or are there times this just wastes time?
+    for(auto it = sites[recursion - minRecursion].begin(); it !=  sites[recursion - minRecursion].end(); ++it){
+        if(*it == site){ return sites[recursion - minRecursion].size(); }
+    }
+    sites[recursion - minRecursion].push_back(site);
     return sites[recursion - minRecursion].size();
 }
 
@@ -77,13 +82,18 @@ int MapNode::numSite(int recursion){
 }
 
 int MapNode::pushCorner(int recursion, Point corner){
+    // TODO we can probably optimize these vectors for memory usage by picking a sensible starting size.
     if(recursion < minRecursion) return -1;
     
     if((int)corners.size() -1 < recursion - minRecursion){
         _increaseRecursion(recursion);
     }
 
-    corners[recursion - minRecursion].insert(corner);
+    // TODO should we alwas check for duplicate entries or are there times this just wastes time?
+    for(auto it = corners[recursion - minRecursion].begin(); it !=  corners[recursion - minRecursion].end(); ++it){
+        if(*it == corner){ return corners[recursion - minRecursion].size(); }
+    }
+    corners[recursion - minRecursion].push_back(corner);
     return corners[recursion - minRecursion].size();
 }
 
@@ -99,25 +109,25 @@ int MapNode::numCorner(int recursion){
     return corners[recursion].size();
 }
 
-set<Point>::iterator MapNode::beginSite(const int recursion){
+vector<Point>::iterator MapNode::beginSite(const int recursion){
     //if(heights.size() -1 + minRecursion < recursion) return emptySet.end();
 
     return sites[recursion - minRecursion].begin();
 }
 
-set<Point>::iterator MapNode::endSite(const int recursion){
+vector<Point>::iterator MapNode::endSite(const int recursion){
     //if(heights.size() -1 + minRecursion < recursion) return emptySet.end();
 
     return sites[recursion - minRecursion].end();
 }
 
-set<Point>::iterator MapNode::beginCorner(const int recursion){
+vector<Point>::iterator MapNode::beginCorner(const int recursion){
     //if(heights.size() -1 + minRecursion < recursion) return emptySet.end();
 
     return corners[recursion - minRecursion].begin();
 }   
 
-set<Point>::iterator MapNode::endCorner(const int recursion){
+vector<Point>::iterator MapNode::endCorner(const int recursion){
     //if(heights.size() -1 + minRecursion < recursion) return emptySet.end();
 
     return corners[recursion - minRecursion].end();
@@ -159,33 +169,97 @@ bool MapNode::isInside(int recursion, Point point){
 }
 
 
-
-std::unordered_map<Point, struct MapNode, pairHash> MapData::MapContainer;
+MapType MapData::MapContainer;
 
 MapData::MapData(bool testing){
-    if(!testing){
-        Point rootPoint(0,0);
-        Point insertPoint;
+    static bool initialised = false;
 
+    if(!testing and !initialised){
+        cout << "Initialising data.\n";
+        initialised = true;
+        Point rootPoint(0,0);
+        Point insertPoint, insertPoint2, previousPoint;
+        MapNode insertData;
+        unordered_multimap<Point,Point,pairHash> tempEdges;
+
+        // Anoyingly we need to keep a simple itterable of input points to feed construct_voronoi() with.
+        // I tried overloading the MapType::iterater to return only the keys which could be made work but 
+        // we have no way of knowing what order points in an unordered_map come in there is no way to tie 
+        // the voronoi data back to the coordinates.
         std::vector<Point> points;
 
+        // Create initial points.
         for (int i = 0; i < MAP_NUM_POINTS; ++i){
-            insertPoint.x((int)(rand() % MAP_SIZE));
-            insertPoint.y((int)(rand() % MAP_SIZE));
+            insertPoint.x((int)(rand() % MAP_SIZE * MAP_MIN_RES));
+            insertPoint.y((int)(rand() % MAP_SIZE * MAP_MIN_RES));
 
-            insert(MapNode(insertPoint, rootPoint, 0));
+            insertData = MapNode(insertPoint, rootPoint, 0);
+            insertData.type = TYPE_SITE;
+
+            insert(insertData);
             points.push_back(insertPoint);
         }
         cout << points.size() << "\n";
 
+
         voronoi_diagram<double> vd;
-        //construct_voronoi((std::vector<Point>::iterator)MapContainer.begin(), (std::vector<Point>::iterator)MapContainer.end(), &vd);
         construct_voronoi(points.begin(), points.end(), &vd);
+
+
+        int result = 0;
+        for (voronoi_diagram<double>::const_cell_iterator it = vd.cells().begin(); it != vd.cells().end(); ++it) {
+            const voronoi_diagram<double>::cell_type &cell = *it;
+            const voronoi_diagram<double>::edge_type *edge = cell.incident_edge();
+
+            Point siteCoord = points[cell.source_index()];
+            MapType::iterator site = find(siteCoord);
+
+            tempEdges.clear();
+
+            // This is convenient way to iterate edges around Voronoi cell.
+            do {
+                if (edge->is_primary() and edge->is_finite()){
+                    ++result;
+
+                    // Find all the corners.
+                    // We only want vertex0. vertex1 would just give us duplicates.
+                    insertPoint.x((int)edge->vertex0()->x());
+                    insertPoint.y((int)edge->vertex0()->y());
+
+                    // Create new map node if it doesn't exist already.
+                    if(!count(insertPoint)){
+                        insertData = MapNode(insertPoint, rootPoint, 0);
+                        insertData.type = TYPE_CORNER;
+                        insert(insertData);
+                    }
+
+                    // Update the map node.
+                    if(count(insertPoint)){
+                        //MapType::iterator corner = find(insertPoint);
+                        //corner->second.pushSite(0, siteCoord);
+                        MapContainer.find(insertPoint)->second.pushSite(0, siteCoord);
+
+                        site->second.pushCorner(0, insertPoint);
+                    }
+
+                    // Find the neghbouring sites.
+                    insertPoint.x(points[edge->twin()->cell()->source_index()].x());
+                    insertPoint.y(points[edge->twin()->cell()->source_index()].y());
+
+                    // Update the map node.
+                    site->second.pushSite(0, insertPoint);
+
+                }
+                edge = edge->next();
+            } while (edge != cell.incident_edge());
+
+        }
+        cout << result << " " << MapContainer.size() << "\n";
     }
 }
 
 void MapData::insert(MapNode node){
-    if(node.coordinates.x() >= 0 and node.coordinates.y() >= 0 and node.coordinates.x() < MAP_SIZE and node.coordinates.y() < MAP_SIZE){
+    if(node.coordinates.x() >= 0 and node.coordinates.y() >= 0 and node.coordinates.x() < MAP_SIZE * MAP_MIN_RES and node.coordinates.y() < MAP_SIZE * MAP_MIN_RES){
         MapContainer.insert(make_pair(node.coordinates, node));
     }
 }
@@ -194,15 +268,15 @@ int MapData::count(Point point){
     return MapContainer.count(point);
 }
 
-MapType::const_iterator MapData::find(Point point){
+MapType::iterator MapData::find(Point point){
     return MapContainer.find(point);
 }
 
 
-key_iterator MapData::begin(void){
+MapType::iterator MapData::begin(void){
     return MapContainer.begin();
 }
 
-key_iterator MapData::end(void){
+MapType::iterator MapData::end(void){
     return MapContainer.end();
 }

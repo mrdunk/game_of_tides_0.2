@@ -22,8 +22,8 @@ using boost::polygon::voronoi_builder;
 using boost::polygon::voronoi_diagram;
 
 #define MAP_NUM_POINTS  1000//000
-#define MAP_SIZE        100000000
-#define MAP_MIN_RES     100
+#define MAP_SIZE        1000//000//00
+#define MAP_MIN_RES     1000
 
 
 #define RECURSE         3
@@ -36,16 +36,25 @@ using namespace std;
 class MapNode;
 class pairHash;
 
-//typedef boost::polygon::polygon_data<int> Polygon;
 typedef boost::polygon::point_data<int> Point;
 typedef std::unordered_map<Point, MapNode, pairHash> MapType;
-//typedef MapType::iterator MapTypeIter;
+
+
+/* Hashing for Point type. */
+class pairHash{
+    public:
+        size_t operator()(const Point &k) const{
+            //cout << (((size_t)k.x() << (4* sizeof(size_t))) ^ (size_t)k.y()) << "\n";
+            return ((size_t)k.x() << (4* sizeof(size_t))) ^ (size_t)k.y();
+        }
+};
 
 class MapNode{
     public:
         /* constructors */
         MapNode(Point _coordinates, Point _parent, int _minRecursion) : coordinates(_coordinates), parent(_parent), minRecursion(_minRecursion) {}
         MapNode(Point _coordinates, int _minRecursion) : coordinates(_coordinates), minRecursion(_minRecursion) {}
+        MapNode(void) {};
         
         int type;
         Point coordinates;
@@ -54,13 +63,13 @@ class MapNode{
         int getMaxRecursion(void);
 
         int pushSite(int recursion, Point site);
-        set<Point>::iterator beginSite(const int recursion);
-        set<Point>::iterator endSite(const int recursion);
+        vector<Point>::iterator beginSite(const int recursion);
+        vector<Point>::iterator endSite(const int recursion);
         int numSite(int recursion);
         
         int pushCorner(int recursion, Point corner);
-        set<Point>::iterator beginCorner(const int recursion);
-        set<Point>::iterator endCorner(const int recursion);
+        vector<Point>::iterator beginCorner(const int recursion);
+        vector<Point>::iterator endCorner(const int recursion);
         int numCorner(int recursion);
 
         int setHeight(int recursion, int height);
@@ -73,31 +82,13 @@ class MapNode{
     private:
         void _increaseRecursion(int recursion);
         vector<int> heights;
-        vector<set<Point> > sites;
-        vector<set<Point> > corners;
-};
-
-/* Hashing for Point type. */
-class pairHash{
-    public:
-        size_t operator()(const Point &k) const{
-            //cout << (((size_t)k.x() << (4* sizeof(size_t))) ^ (size_t)k.y()) << "\n";
-            return ((size_t)k.x() << (4* sizeof(size_t))) ^ (size_t)k.y();
-        }               
-};
-
-/* Return only keys from iterator.
- * http://stackoverflow.com/a/16527081/2669284 */
-class key_iterator : public MapType::iterator{
-    public:
-        key_iterator() : MapType::iterator() {};
-        key_iterator(MapType::iterator s) : MapType::iterator(s) {};
-        Point* operator->() { return (Point* const)&(MapType::iterator::operator->()->first); }
-        Point operator*() { return MapType::iterator::operator*().first; }
+        vector<vector<Point> > sites;
+        vector<vector<Point> > corners;
 };
 
 class MapData{
     public:
+        bool initialised;
         MapData(bool testing);
         MapData(void){MapData(false);};
         
@@ -112,10 +103,11 @@ class MapData{
 
         void insert(MapNode node);
         int count(Point point);
-        MapType::const_iterator find(Point point);
+        MapType::iterator find(Point point);
 
-        key_iterator begin();
-        key_iterator end();
+        MapType::iterator begin();
+        MapType::iterator end();
+    
 };
 
 #endif

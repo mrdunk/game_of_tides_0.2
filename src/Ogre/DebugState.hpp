@@ -13,9 +13,8 @@
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-class DebugState : public AppState
-{
-public:
+class DebugState : public AppState{
+  public:
 	DebugState();
 
 	DECLARE_APPSTATE_CLASS(DebugState)
@@ -43,16 +42,22 @@ public:
 
     void initMaterial(void);
     void generateScenery(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines);
-    void drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
+    void drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
+    void drawUniqueLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
     void drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre);
     Ogre::ColourValue colour(int cornerHeight, int terrain);
+
+    void addLines(const Ogre::String name, void(DebugState::*p_function)(Ogre::ManualObject*));
+    void viewBox(Ogre::ManualObject* manual_lines);
+    void viewCell(Ogre::ManualObject* manual_lines);
+    void viewCell2(Ogre::ManualObject* manual_lines);
 
     /* Calculate the area of the map currently under the viewport.
      * This assmess the cmaera is pointing straight down.
      */
     void calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY);
 
-private:
+  private:
 	Ogre::SceneNode*			m_pOgreHeadNode;
 	Ogre::Entity*				m_pOgreHeadEntity;
 	Ogre::MaterialPtr			m_pOgreHeadMat;
@@ -73,7 +78,7 @@ private:
 	bool						m_bLMouseDown, m_bRMouseDown;
 	bool						m_bSettingsMode;
 
-    MapData                        data;
+    MapData                     data;
 };
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
