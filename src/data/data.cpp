@@ -152,7 +152,7 @@ bool pointInsideTriangle(Point p, Point c1, Point c2, Point c3){
     return pointInsideTriangle(p.x(), p.y(), c1.x(), c1.y(), c2.x(), c2.y(), c3.x(), c3.y());
 }
 
-bool MapNode::isInside(int recursion, Point point){
+bool MapNode::isInside(const int recursion, Point point){
     if(type != TYPE_SITE) return 0;
 
     Point first(0,0);
@@ -168,6 +168,29 @@ bool MapNode::isInside(int recursion, Point point){
     return pointInsideTriangle(point, coordinates, previous, first);
 }
 
+bool MapNode::cornersInside(const int recursion, MapNode site){
+    if(type != TYPE_SITE) return 0;
+
+    for(auto itCorner = site.beginCorner(recursion); itCorner != site.endCorner(recursion); ++itCorner){
+        if(!isInside(recursion -1, *itCorner)) return false;
+    }
+    return true;
+}
+
+void MapNode::boundingBox(const int recursion, Point& bl, Point& tr){
+    tr.x(coordinates.x());
+    tr.y(coordinates.y());
+    bl.x(coordinates.x());
+    bl.y(coordinates.y());
+    if(numCorner(recursion) <= 0) return;
+    
+    for(auto it = beginCorner(recursion); it != endCorner(recursion); ++it){
+        if(it->x() < bl.x()) bl.x(it->x());
+        if(it->y() < bl.y()) bl.y(it->y());
+        if(it->x() > tr.x()) tr.x(it->x());
+        if(it->y() > tr.y()) tr.y(it->y());
+    }
+}
 
 MapType MapData::MapContainer;
 
@@ -177,16 +200,16 @@ MapData::MapData(bool testing){
     if(!testing and !initialised){
         cout << "Initialising data.\n";
         initialised = true;
+        bool firstLoop = true;
         Point rootPoint(0,0);
-        Point insertPoint, insertPoint2, previousPoint;
+        Point insertPoint;
         MapNode insertData;
-        unordered_multimap<Point,Point,pairHash> tempEdges;
 
         // Anoyingly we need to keep a simple itterable of input points to feed construct_voronoi() with.
         // I tried overloading the MapType::iterater to return only the keys which could be made work but 
         // we have no way of knowing what order points in an unordered_map come in there is no way to tie 
         // the voronoi data back to the coordinates.
-        std::vector<Point> points;
+        std::vector<Point> seedPoints;
 
         // Create initial points.
         for (int i = 0; i < MAP_NUM_POINTS; ++i){
@@ -197,64 +220,205 @@ MapData::MapData(bool testing){
             insertData.type = TYPE_SITE;
 
             insert(insertData);
-            points.push_back(insertPoint);
+            seedPoints.push_back(insertPoint);
+
+            if(firstLoop or
+                    abs(insertPoint.x() - (MAP_SIZE * MAP_MIN_RES /2)) + abs(insertPoint.y() - (MAP_SIZE * MAP_MIN_RES /2)) < 
+                    abs(centre.x() - (MAP_SIZE * MAP_MIN_RES /2)) + abs(centre.y() - (MAP_SIZE * MAP_MIN_RES /2))){
+                centre = insertPoint;
+            }
+
+            if(firstLoop or insertPoint.x() + insertPoint.y() < zero.x() + zero.y()){
+                zero = insertPoint;
+            }
+
+            firstLoop = false;
         }
-        cout << points.size() << "\n";
+        cout << centre.x() << "," << centre.y() << "\n";
+        cout << zero.x() << "," << zero.y() << "\n";
 
+        populateVoronoi(seedPoints, 0);
 
-        voronoi_diagram<double> vd;
-        construct_voronoi(points.begin(), points.end(), &vd);
+        raiseLand();
 
+        std::unordered_set<Point, pairHash> shore;
+        int rec;
+        for(rec = 1; rec <= 2; ++rec){
+            shore = getShore(rec -1);
+            moreDetail(rec, shore, seedPoints);
+        }
+        getShore(rec -1);
+    }
+}
 
-        int result = 0;
-        for (voronoi_diagram<double>::const_cell_iterator it = vd.cells().begin(); it != vd.cells().end(); ++it) {
-            const voronoi_diagram<double>::cell_type &cell = *it;
-            const voronoi_diagram<double>::edge_type *edge = cell.incident_edge();
+void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash> shore, std::vector<Point>& seedPoints){
+    Point insertPoint;
+    MapNode insertData;
+    Point bl, tr;
+    for(auto itSite = shore.begin(); itSite != shore.end(); ++itSite){
+        find(*itSite)->second.boundingBox(recursion -1, bl, tr);
+        for(int i = 0; i < 50; ++i){
+            insertPoint.x(bl.x() + (rand() % (tr.x() - bl.x())));
+            insertPoint.y(bl.y() + (rand() % (tr.y() - bl.y())));
 
-            Point siteCoord = points[cell.source_index()];
-            MapType::iterator site = find(siteCoord);
+            insertData = MapNode(insertPoint, *itSite, recursion);
+            insertData.type = TYPE_SITE;
 
-            tempEdges.clear();
+            if(count(insertPoint) <= 0 and find(*itSite)->second.isInside(recursion -1, insertPoint)){
+                insertData = MapNode(insertPoint, *itSite, recursion);
+                insertData.type = TYPE_SITE;
+                insertData.setHeight(recursion, 1);
+                insert(insertData);
+                seedPoints.push_back(insertPoint);
+            }
+        }
+    }
+    populateVoronoi(seedPoints, recursion);
 
-            // This is convenient way to iterate edges around Voronoi cell.
-            do {
-                if (edge->is_primary() and edge->is_finite()){
-                    ++result;
-
-                    // Find all the corners.
-                    // We only want vertex0. vertex1 would just give us duplicates.
-                    insertPoint.x((int)edge->vertex0()->x());
-                    insertPoint.y((int)edge->vertex0()->y());
-
-                    // Create new map node if it doesn't exist already.
-                    if(!count(insertPoint)){
-                        insertData = MapNode(insertPoint, rootPoint, 0);
-                        insertData.type = TYPE_CORNER;
-                        insert(insertData);
-                    }
-
-                    // Update the map node.
-                    if(count(insertPoint)){
-                        //MapType::iterator corner = find(insertPoint);
-                        //corner->second.pushSite(0, siteCoord);
-                        MapContainer.find(insertPoint)->second.pushSite(0, siteCoord);
-
-                        site->second.pushCorner(0, insertPoint);
-                    }
-
-                    // Find the neghbouring sites.
-                    insertPoint.x(points[edge->twin()->cell()->source_index()].x());
-                    insertPoint.y(points[edge->twin()->cell()->source_index()].y());
-
-                    // Update the map node.
-                    site->second.pushSite(0, insertPoint);
-
+    // TODO Maybe there is a better place to do this?
+    for(auto it = begin(); it != end(); ++it){
+        if(it->second.type == TYPE_SITE){
+            if(it->second.minRecursion == recursion){
+                if(find(it->second.parent)->second.cornersInside(recursion, it->second)){
+                    it->second.setHeight(recursion, 10);
+                } else {
+                    //it->second.setHeight(recursion, 0);
                 }
-                edge = edge->next();
-            } while (edge != cell.incident_edge());
-
+            } else {
+                // Need to copy the previous recursion level height to this recursion.
+                it->second.setHeight(recursion,  it->second.getHeight(recursion -1));
+            }
         }
-        cout << result << " " << MapContainer.size() << "\n";
+    }
+}
+
+void MapData::raiseLand(void){
+    int islandCount = 0;
+    std::unordered_set<Point, pairHash> open, closed, next;
+    for(auto it = begin(); it != end(); ++it){
+        if(it->second.type == TYPE_SITE){
+            if(rand() % 100 < SEED_ISLAND and 
+                    it->first.x() > AVOID_EDGE * MAP_MIN_RES and it->first.y() > AVOID_EDGE * MAP_MIN_RES and 
+                    it->first.x() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES and it->first.y() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES){
+                it->second.setHeight(0, 1);
+                ++islandCount;
+                open.insert(it->first);
+            }
+        }
+    }
+    if(islandCount == 0){
+        cout << "No natural islands. Using centre point.\n";
+        MapContainer[centre].setHeight(0, 1);
+    }
+
+
+    while(open.size() > 0){
+        //cout << "open:   " << open.size() << "\n";
+        //cout << "closed: " << closed.size() << "\n";
+        for(auto it = open.begin(); it != open.end(); ++it){
+            for(auto itSites = find(*it)->second.beginSite(0); itSites != find(*it)->second.endSite(0); ++itSites){
+                if(rand() % 100 < GROW_ISLAND and open.count(*itSites) <= 0 and closed.count(*itSites) <= 0 and
+                        itSites->x() > AVOID_EDGE * MAP_MIN_RES and itSites->y() > AVOID_EDGE * MAP_MIN_RES and
+                        itSites->x() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES and itSites->y() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES){
+                    find(*itSites)->second.setHeight(0, 1);
+                    next.insert(*itSites);
+                }
+            }
+            closed.insert(*it);
+        }
+
+    next.swap(open);
+    next.clear();
+    }
+}
+
+std::unordered_set<Point, pairHash> MapData::getShore(const int recursion){
+    std::unordered_set<Point, pairHash> open, closed, next, shore;
+    open.insert(zero);
+
+    while(open.size() > 0){
+        for(auto it = open.begin(); it != open.end(); ++it){
+            for(auto itSites = find(*it)->second.beginSite(recursion); itSites != find(*it)->second.endSite(recursion); ++itSites){
+                if(find(*itSites)->second.getHeight(recursion) > 0){
+                    shore.insert(*itSites);
+                } else {
+                    if(open.count(*itSites) <= 0 and closed.count(*itSites) <= 0){
+                        find(*itSites)->second.setHeight(recursion, -1);
+                        next.insert(*itSites);
+                    }
+                }
+            }
+            closed.insert(*it);
+        }
+
+        next.swap(open);
+        next.clear();
+    }
+
+    for(auto it = begin(); it != end(); ++it){
+        if(it->second.getHeight(recursion) >= 0){
+            it->second.setHeight(recursion, 1);
+        } else {
+            it->second.setHeight(recursion, 0);
+        }
+    }
+
+    return shore;
+}
+    
+void MapData::populateVoronoi(std::vector<Point>& seedPoints, const int recursion){
+    Point insertPoint, insertPoint2, previousPoint;
+    MapNode insertData;
+    unordered_multimap<Point,Point,pairHash> tempEdges;   
+    
+    voronoi_diagram<double> vd;
+    construct_voronoi(seedPoints.begin(), seedPoints.end(), &vd);
+
+
+    for (voronoi_diagram<double>::const_cell_iterator it = vd.cells().begin(); it != vd.cells().end(); ++it) {
+        const voronoi_diagram<double>::cell_type &cell = *it;
+        const voronoi_diagram<double>::edge_type *edge = cell.incident_edge();
+
+        Point siteCoord = seedPoints[cell.source_index()];
+        MapType::iterator site = find(siteCoord);
+
+        tempEdges.clear();
+
+        // This is convenient way to iterate edges around Voronoi cell.
+        do {
+            if (edge->is_primary() and edge->is_finite()){
+
+                // Find all the corners.
+                // We only want vertex0. vertex1 would just give us duplicates.
+                insertPoint.x((int)edge->vertex0()->x());
+                insertPoint.y((int)edge->vertex0()->y());
+
+                // Create new map node if it doesn't exist already.
+                if(!count(insertPoint)){
+                    insertData = MapNode(insertPoint, MapContainer[siteCoord].parent, recursion);
+                    insertData.type = TYPE_CORNER;
+                    insert(insertData);
+                }
+
+                // Update the map node.
+                if(count(insertPoint)){
+                    //MapType::iterator corner = find(insertPoint);
+                    //corner->second.pushSite(0, siteCoord);
+                    MapContainer.find(insertPoint)->second.pushSite(recursion, siteCoord);
+
+                    site->second.pushCorner(recursion, insertPoint);
+                }
+
+                // Find the neghbouring sites.
+                insertPoint.x(seedPoints[edge->twin()->cell()->source_index()].x());
+                insertPoint.y(seedPoints[edge->twin()->cell()->source_index()].y());
+
+                // Update the map node.
+                site->second.pushSite(recursion, insertPoint);
+
+            }
+            edge = edge->next();
+        } while (edge != cell.incident_edge());
     }
 }
 

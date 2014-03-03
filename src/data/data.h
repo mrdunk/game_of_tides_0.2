@@ -24,7 +24,7 @@ using boost::polygon::voronoi_diagram;
 #define MAP_NUM_POINTS  1000//000
 #define MAP_SIZE        1000//000//00
 #define MAP_MIN_RES     1000
-
+#define AVOID_EDGE      100
 
 #define RECURSE         3
 
@@ -78,7 +78,9 @@ class MapNode{
         /* Only used for type == TYPE_SITE.
          * returns true if point is inside the polygon described by corners.
          */
-        bool isInside(int recursion, Point point);
+        bool isInside(const int recursion, Point point);
+        bool cornersInside(const int recursion, MapNode site);
+        void boundingBox(const int recursion, Point& bl, Point& tr);
     private:
         void _increaseRecursion(int recursion);
         vector<int> heights;
@@ -96,10 +98,10 @@ class MapData{
         static MapType MapContainer;
         
         // Key to the entry closest to the map centre.
-        int64_t centre;
+        Point centre;
 
         // Key to  entry closest to the 0,0 coordinate.
-        int64_t zero;
+        Point zero;
 
         void insert(MapNode node);
         int count(Point point);
@@ -107,7 +109,11 @@ class MapData{
 
         MapType::iterator begin();
         MapType::iterator end();
-    
+                
+        void populateVoronoi(std::vector<Point>& seedPoints, const int recursion);
+        void raiseLand(void);
+        std::unordered_set<Point, pairHash> getShore(const int recursion);
+        void moreDetail(const int recursion, std::unordered_set<Point, pairHash> shore, std::vector<Point>& seedPoints);
 };
 
 #endif

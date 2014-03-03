@@ -44,6 +44,9 @@ class DebugState : public AppState{
     void generateScenery(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines);
     void drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
     void drawUniqueLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
+    
+    void addPlanes(const Ogre::String name);
+
     void drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre);
     Ogre::ColourValue colour(int cornerHeight, int terrain);
 
