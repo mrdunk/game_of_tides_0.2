@@ -103,6 +103,9 @@ class MapData{
         // Key to  entry closest to the 0,0 coordinate.
         Point zero;
 
+        // Data has been generated to this level.
+        static int maxRecursion;
+
         void insert(MapNode node);
         int count(Point point);
         MapType::iterator find(Point point);
@@ -114,6 +117,7 @@ class MapData{
         void raiseLand(void);
         std::unordered_set<Point, pairHash> getShore(const int recursion);
         void moreDetail(const int recursion, std::unordered_set<Point, pairHash> shore, std::vector<Point>& seedPoints);
+        void setHeights(void);
 
         bool planesOverlap(const int recursion1, Point point1, const int recursion2, Point point2);
 };
