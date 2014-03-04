@@ -114,6 +114,8 @@ class MapData{
         void raiseLand(void);
         std::unordered_set<Point, pairHash> getShore(const int recursion);
         void moreDetail(const int recursion, std::unordered_set<Point, pairHash> shore, std::vector<Point>& seedPoints);
+
+        bool planesOverlap(const int recursion1, Point point1, const int recursion2, Point point2);
 };
 
 #endif

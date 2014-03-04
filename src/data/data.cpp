@@ -243,7 +243,7 @@ MapData::MapData(bool testing){
 
         std::unordered_set<Point, pairHash> shore;
         int rec;
-        for(rec = 1; rec <= 2; ++rec){
+        for(rec = 1; rec <= 4; ++rec){
             shore = getShore(rec -1);
             moreDetail(rec, shore, seedPoints);
         }
@@ -257,7 +257,7 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
     Point bl, tr;
     for(auto itSite = shore.begin(); itSite != shore.end(); ++itSite){
         find(*itSite)->second.boundingBox(recursion -1, bl, tr);
-        for(int i = 0; i < 50; ++i){
+        for(int i = 0; i < 40; ++i){
             insertPoint.x(bl.x() + (rand() % (tr.x() - bl.x())));
             insertPoint.y(bl.y() + (rand() % (tr.y() - bl.y())));
 
@@ -276,20 +276,54 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
     populateVoronoi(seedPoints, recursion);
 
     // TODO Maybe there is a better place to do this?
+    deque<Point> open;
+    unordered_set<Point, pairHash> closed;
+    Point working;
     for(auto it = begin(); it != end(); ++it){
         if(it->second.type == TYPE_SITE){
             if(it->second.minRecursion == recursion){
-                if(find(it->second.parent)->second.cornersInside(recursion, it->second)){
-                    it->second.setHeight(recursion, 10);
-                } else {
-                    //it->second.setHeight(recursion, 0);
-                }
             } else {
                 // Need to copy the previous recursion level height to this recursion.
                 it->second.setHeight(recursion,  it->second.getHeight(recursion -1));
             }
+
+            //if(it->second.minRecursion == recursion -1 and it->second.getHeight(recursion -1) <= 0){
+            for(int r = it->second.minRecursion; r < recursion; ++r){
+                if(it->second.getHeight(r) <= 0){
+                    open.clear();
+                    closed.clear();
+                    for(auto itSite = it->second.beginSite(recursion); itSite != it->second.endSite(recursion); ++itSite){
+                        if(find(*itSite)->second.minRecursion == recursion and planesOverlap(recursion -1, it->first, recursion, *itSite)){
+                            //find(*itSite)->second.setHeight(recursion, 0);
+                            open.push_back(*itSite);
+                        }
+                    }
+                    while(!open.empty()){
+                        working = open.front();
+                        open.pop_front();
+                        closed.insert(working);
+                        find(working)->second.setHeight(recursion, 0);
+                        for(auto itSite = find(working)->second.beginSite(recursion); itSite != find(working)->second.endSite(recursion); ++itSite){
+                            if(find(*itSite)->second.minRecursion == recursion and closed.count(*itSite) <= 0 and planesOverlap(recursion -1, it->first, recursion, *itSite)){
+                                open.push_back(*itSite);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+}
+
+bool MapData::planesOverlap(const int recursion1, Point point1, const int recursion2, Point point2){
+    MapNode site1 = find(point1)->second;
+    MapNode site2 = find(point2)->second;
+    for(auto itCorner = site2.beginCorner(recursion2); itCorner != site2.endCorner(recursion2); ++itCorner){
+        if(site1.isInside(recursion1, *itCorner)){
+            return true;
+        }
+    }
+    return false;
 }
 
 void MapData::raiseLand(void){

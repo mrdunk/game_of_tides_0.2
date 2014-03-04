@@ -130,10 +130,10 @@ void DebugState::viewCell(ManualObject* manual_lines){
     for(auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
         if(it->second.type == TYPE_SITE and it->second.minRecursion <= recursion){
             //cout << it->second.numSite(recursion) << "\n";
-            site0 = Vector3((float)it->first.x() / MAP_MIN_RES, 10, (float)it->first.y() / MAP_MIN_RES);
+            site0 = Vector3((float)it->first.x() / MAP_MIN_RES, 1, (float)it->first.y() / MAP_MIN_RES);
             if(it->second.numCorner(recursion) > 0){
                 for(auto itSite = it->second.beginSite(recursion); itSite != it->second.endSite(recursion); ++itSite){
-                    site1 = Vector3((float)itSite->x() / MAP_MIN_RES, 10, (float)itSite->y() / MAP_MIN_RES);
+                    site1 = Vector3((float)itSite->x() / MAP_MIN_RES, 1, (float)itSite->y() / MAP_MIN_RES);
                     drawUniqueLine(manual_lines, ColourValue(0.1,0.1,0), site0, site1);
                 }
             }
@@ -148,7 +148,7 @@ void DebugState::viewCell2(ManualObject* manual_lines){
 
     //int count = 0;
 
-    const int recursion = 1;
+    const int recursion = 0;
     Vector3 corner, previousCorner, firstCorner;
     bool started;
     for(auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
@@ -156,7 +156,7 @@ void DebugState::viewCell2(ManualObject* manual_lines){
             if(it->second.numCorner(recursion) > 0){
                 started = false;
                 for(auto itCorner = it->second.beginCorner(recursion); itCorner != it->second.endCorner(recursion); ++itCorner){
-                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, 10, (float)itCorner->y() / MAP_MIN_RES);
+                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, 1, (float)itCorner->y() / MAP_MIN_RES);
                     if(!started){
                         started = true;
                         firstCorner = corner;
@@ -197,7 +197,7 @@ void DebugState::addLines(const String name, void(DebugState::*p_function)(Manua
 
 void DebugState::addPlanes(const String name){
     static int vertexCount = 0;
-    const int recursion = 1;
+    const int recursion = 2;
     ManualObject* manual_planes;
     try{
         manual_planes = m_pSceneMgr->getManualObject(name);
@@ -264,7 +264,7 @@ void DebugState::createScene(){
     initMaterial();
 
     addLines("screenOutline", &DebugState::viewBox);
-    addLines("cells", &DebugState::viewCell);
+    //addLines("cells", &DebugState::viewCell);
     addLines("cells2", &DebugState::viewCell2);
     addPlanes("planes");
     
@@ -419,8 +419,8 @@ bool DebugState::keyPressed(const OIS::KeyEvent &keyEventRef)
         //Entity* line = m_pSceneMgr->getRootSceneNode()->getEntity("line");
         ManualObject* lines = m_pSceneMgr->getManualObject("screenOutline");
         lines->setVisible(!lines->getVisible());
-        lines = m_pSceneMgr->getManualObject("cells");
-        lines->setVisible(!lines->getVisible());
+        //lines = m_pSceneMgr->getManualObject("cells");
+        //lines->setVisible(!lines->getVisible());
         lines = m_pSceneMgr->getManualObject("cells2");
         lines->setVisible(!lines->getVisible());
     }
