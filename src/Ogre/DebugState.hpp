@@ -41,14 +41,11 @@ class DebugState : public AppState{
 	void update(double timeSinceLastFrame);
 
     void initMaterial(void);
-    void generateScenery(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines);
     void drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
     void drawUniqueLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
-    
-    void addPlanes(const Ogre::String name);
-
-    void drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre);
-    Ogre::ColourValue colour(int cornerHeight, int terrain);
+   
+    void addPlanes(const Ogre::String name){ addPlanes(name, Point(0, 0), Point(MAP_SIZE * MAP_MIN_RES, MAP_SIZE * MAP_MIN_RES)); };
+    void addPlanes(const Ogre::String name, Point bl, Point tr);
 
     void addLines(const Ogre::String name, void(DebugState::*p_function)(Ogre::ManualObject*));
     void viewBox(Ogre::ManualObject* manual_lines);
@@ -59,6 +56,9 @@ class DebugState : public AppState{
      * This assmess the cmaera is pointing straight down.
      */
     void calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY);
+
+    Ogre::ColourValue landColour(float siteHeight, float height, float gradient);
+    void generateScenery();
 
   private:
 	Ogre::SceneNode*			m_pOgreHeadNode;
@@ -82,6 +82,8 @@ class DebugState : public AppState{
 	bool						m_bSettingsMode;
 
     MapData                     data;
+
+    bool                        hasMoved;
 };
 
 //|||||||||||||||||||||||||||||||||||||||||||||||

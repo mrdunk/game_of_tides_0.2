@@ -64,7 +64,6 @@ void DebugState::enter()
 
     buildGUI();
 
-
     createScene();
 }
 
@@ -105,13 +104,13 @@ void DebugState::exit()
 void DebugState::viewBox(ManualObject* manual_lines){
     float lowX, lowY, highX, highY;
     calculateViewedMap(lowX, lowY, highX, highY);
-    cout << lowX << "," << lowY << "\t" << highX << "," << highY << "\n";
-    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, lowY), Ogre::Vector3(lowX, 10, highY));
-    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, highY), Ogre::Vector3(highX, 10, highY));
-    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(highX, 10, highY), Ogre::Vector3(highX, 10, lowY));
-    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(highX, 10, lowY), Ogre::Vector3(lowX, 10, lowY));
-    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, lowY), Ogre::Vector3(highX, 10, highY));
-    drawLine(manual_lines, ColourValue(0,0,1), Ogre::Vector3(lowX, 10, highY), Ogre::Vector3(highX, 10, lowY));
+    //cout << lowX << "," << lowY << "\t" << highX << "," << highY << "\n";
+    drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(lowX, 10, lowY), Ogre::Vector3(lowX, 10, highY));
+    drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(lowX, 10, highY), Ogre::Vector3(highX, 10, highY));
+    drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(highX, 10, highY), Ogre::Vector3(highX, 10, lowY));
+    drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(highX, 10, lowY), Ogre::Vector3(lowX, 10, lowY));
+    drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(lowX, 10, lowY), Ogre::Vector3(highX, 10, highY));
+    drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(lowX, 10, highY), Ogre::Vector3(highX, 10, lowY));
 }
 
 void DebugState::drawUniqueLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
@@ -189,34 +188,43 @@ void DebugState::addLines(const String name, void(DebugState::*p_function)(Manua
     m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual_lines);
 }
 
-void DebugState::addPlanes(const String name){
-    static int vertexCount = 0;
+void DebugState::addPlanes(const String name, Point bl, Point tr){
+    int vertexCount = 0;
     const int recursion = data.maxRecursion;
     cout << "maxRecursion: " << recursion << "\n";
     ManualObject* manual_planes;
     try{
         manual_planes = m_pSceneMgr->getManualObject(name);
-        // TODO empty ManualObject.
+        m_pSceneMgr->destroyManualObject(manual_planes);
     } catch (Ogre::Exception ex) {
-        manual_planes = m_pSceneMgr->createManualObject(name);
     }
+    manual_planes = m_pSceneMgr->createManualObject(name);
 
-    Vector3 site, corner;
+    Vector3 site, corner, normal;
     manual_planes->begin("SolidColour", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     int cornerCount;
     for(auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
-        if(it->second.type == TYPE_SITE and it->second.minRecursion <= recursion and it->second.getHeight(recursion) > 0){
+        if(it->second.type == TYPE_SITE and it->second.minRecursion <= recursion and 
+                it->first.x() >= bl.x() and it->first.x() < tr.x() and it->first.y() >= bl.y() and it->first.y() < tr.y()){
             if(it->second.numCorner(recursion) > 0){
                 site = Vector3((float)it->first.x() / MAP_MIN_RES, (float)it->second.getHeight(recursion) / MAP_MIN_RES, (float)it->first.y() / MAP_MIN_RES);
                 manual_planes->position(site);
-                manual_planes->colour(ColourValue(0,1,0));
+                manual_planes->colour(landColour(site.y, site.y, 1));
                 manual_planes->normal(0,1,0);
                 cornerCount = 0;
                 for(auto itCorner = it->second.beginCorner(recursion); itCorner != it->second.endCorner(recursion); ++itCorner){
-                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)data.find(*itCorner)->second.getHeight(recursion) / MAP_MIN_RES, (float)itCorner->y() / MAP_MIN_RES);
+                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)data.find(*itCorner)->second.getHeight(recursion) / MAP_MIN_RES, 
+                        (float)itCorner->y() / MAP_MIN_RES);
+
+                    // calculate normal for this point.
+                    Ogre::Vector3 dir0 = site - corner;
+                    Ogre::Vector3 dir0_flat(dir0.x, 0, dir0.z);
+                    Ogre::Vector3 dir1 = Quaternion(Degree(90), Vector3::UNIT_Y) * dir0_flat;
+                    normal = dir0.crossProduct(dir1).normalisedCopy();
+
                     manual_planes->position(corner);
-                    manual_planes->colour(ColourValue(0,0.1,0));
-                    manual_planes->normal(0,1,0);
+                    manual_planes->colour(landColour(site.y, corner.y, normal.y));
+                    manual_planes->normal(normal);
                     if(cornerCount > 0){
                         manual_planes->triangle(vertexCount, vertexCount + cornerCount +1, vertexCount + cornerCount);
                     }
@@ -230,7 +238,9 @@ void DebugState::addPlanes(const String name){
 
     manual_planes->end();
 
-    manual_planes->convertToMesh("test.mesh.planes");
+    m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual_planes);
+
+    /*manual_planes->convertToMesh("test.mesh.planes");
     Entity *ent1 = m_pSceneMgr->createEntity("planes", "test.mesh.planes");
     m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(ent1);
     
@@ -244,8 +254,17 @@ void DebugState::addPlanes(const String name){
     rot0.FromAngleAxis(Ogre::Degree(0), Ogre::Vector3::UNIT_Y);
     sg->addEntity(ent1, Ogre::Vector3(0,0,0), rot0, Ogre::Vector3(1,1,1));
 
-    sg->build();
+    sg->build();*/
+}
 
+Ogre::ColourValue DebugState::landColour(float siteHeight, float height, float gradient){
+    if(siteHeight == 0){
+        return Ogre::ColourValue(0, 0.2, 0.6);
+    }
+    float red = height / 8;
+    float green = 0.8 / (height +1);
+    float blue = 1 - gradient;
+    return Ogre::ColourValue(red, green, blue);
 }
 
 void DebugState::createScene(){
@@ -261,7 +280,8 @@ void DebugState::createScene(){
     addLines("screenOutline", &DebugState::viewBox);
     addLines("cells", &DebugState::viewCell);
     addLines("cells2", &DebugState::viewCell2);
-    addPlanes("planes");
+    //addPlanes("planes");
+    //addPlanes("planes");
     
 
     return;
@@ -285,17 +305,6 @@ void DebugState::initMaterial(void){
     matptr->getTechnique(0)->getPass(0)->setVertexColourTracking(Ogre::TVC_DIFFUSE);   
 }
 
-void DebugState::generateScenery(ManualObject* manual_planes, ManualObject* manual_lines){
-}
-
-
-Ogre::ColourValue DebugState::colour(int cornerHeight, int terrain){
-    return Ogre::ColourValue(0, 0.1, 0.4);  // blue
-}
-
-
-void DebugState::drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre){
-}
 
 void DebugState::drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
     mo->colour(colour);
@@ -337,22 +346,6 @@ void DebugState::calculateViewedMap(float& lowX, float& lowY, float& highX, floa
 
 bool DebugState::keyPressed(const OIS::KeyEvent &keyEventRef)
 {
-    if(m_bSettingsMode == true)
-    {
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_S))
-        {
-            OgreBites::SelectMenu* pMenu = (OgreBites::SelectMenu*)OgreFramework::getSingletonPtr()->m_pTrayMgr->getWidget("DisplayModeSelMenu");
-            if(pMenu->getSelectionIndex() + 1 < (int)pMenu->getNumItems())
-                pMenu->selectItem(pMenu->getSelectionIndex() + 1);
-        }
-
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_W))
-        {
-            OgreBites::SelectMenu* pMenu = (OgreBites::SelectMenu*)OgreFramework::getSingletonPtr()->m_pTrayMgr->getWidget("DisplayModeSelMenu");
-            if(pMenu->getSelectionIndex() - 1 >= 0)
-                pMenu->selectItem(pMenu->getSelectionIndex() - 1);
-        }
-    }
 
     if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_ESCAPE))
     {
@@ -487,23 +480,35 @@ void DebugState::getInput()
 {
     if(m_bSettingsMode == false)
     {
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_A))
+        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_A)){
             m_TranslateVector.x = -m_MoveScale;
+            hasMoved = true;
+        }
 
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_D))
+        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_D)){
             m_TranslateVector.x = m_MoveScale;
+            hasMoved = true;
+        }
 
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_E))
+        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_E)){
             m_TranslateVector.y = -m_MoveScale;
+            hasMoved = true;
+        }
 
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_Q))
+        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_Q)){
             m_TranslateVector.y = m_MoveScale;
+            hasMoved = true;
+        }
 
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_W))
+        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_W)){
             m_TranslateVector.z = -m_MoveScale;
+            hasMoved = true;
+        }
 
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_S))
+        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_S)){
             m_TranslateVector.z = m_MoveScale;
+            hasMoved = true;
+        }
 
     }
 }
@@ -539,13 +544,62 @@ void DebugState::update(double timeSinceLastFrame)
         }
     }
 
-    m_MoveScale = m_MoveSpeed   * timeSinceLastFrame * MAP_SIZE / 1000;
+    m_MoveScale = m_MoveSpeed   * timeSinceLastFrame * (float)MAP_SIZE / 1000.0;
     m_RotScale  = m_RotateSpeed * timeSinceLastFrame;
 
     m_TranslateVector = Vector3::ZERO;
 
     getInput();
+    generateScenery();
     moveCamera();
+}
+
+//struct tile{
+//    int     index;
+//    int     recursion;
+//    int     size;    
+//}
+
+#define MAP_TILES           16
+#define MAP_TILE_SIZE       MAP_SIZE / MAP_TILES
+
+void DebugState::generateScenery(){
+    //static struct tile tiles[MAP_TILES * MAP_TILES];
+    static std::unordered_set<int> todoTiles;
+    if(hasMoved){
+        hasMoved = false;
+        int zoom;
+        if(m_pCamera->getDerivedPosition().y >= 1){
+            zoom = MAP_SIZE / (int)m_pCamera->getDerivedPosition().y;
+        }
+        if(zoom <= 0) zoom = 1;
+        cout << zoom << "\n";
+
+        float lowX, lowY, highX, highY;
+        calculateViewedMap(lowX, lowY, highX, highY);
+
+       for(int xTile = 0; xTile < MAP_TILES; ++xTile){
+           for(int yTile = 0; yTile < MAP_TILES; ++yTile){
+               if(lowX <= (xTile +1) * MAP_TILE_SIZE and highX > xTile * MAP_TILE_SIZE and
+                        lowY <= (yTile +1) * MAP_TILE_SIZE and highY > yTile * MAP_TILE_SIZE){
+                   todoTiles.insert(yTile * MAP_TILES + xTile);
+                   cout << xTile << "," << yTile << "\t";
+               }
+           }
+           cout << "\n";
+       }
+       cout << "\n";
+    }
+
+    //while(todoTiles.size() > 0){
+    if(todoTiles.size() > 0){
+        int working = *(todoTiles.begin());
+        todoTiles.erase(working);
+        addPlanes("tile" + std::to_string(working), Point((working % MAP_TILES) * MAP_TILE_SIZE * MAP_MIN_RES, (working / MAP_TILES) * MAP_TILE_SIZE * MAP_MIN_RES),
+                          Point((working % MAP_TILES +1) * MAP_TILE_SIZE * MAP_MIN_RES, (working / MAP_TILES +1) * MAP_TILE_SIZE * MAP_MIN_RES));
+        //cout << (working % MAP_TILES) * MAP_TILE_SIZE * MAP_MIN_RES << "," << (working / MAP_TILES) * MAP_TILE_SIZE * MAP_MIN_RES << "\t" 
+        //    << (working % MAP_TILES  +1) * MAP_TILE_SIZE * MAP_MIN_RES << "," << (working / MAP_TILES +1) * MAP_TILE_SIZE * MAP_MIN_RES << "\n";
+    }
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
