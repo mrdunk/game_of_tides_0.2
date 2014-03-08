@@ -12,16 +12,12 @@ using namespace std;
 
 #define SEED_ISLAND 5.0
 #define GROW_ISLAND 18 
-#define MAX_RECURSEION 2 
+#define MAX_RECURSEION 4
 
 Point emptyPoint(0, 0);
 vector<Point> emptySet;
 
 void MapNode::_increaseRecursion(int recursion){
-    while((int)heights.size() - 1 + minRecursion < recursion){
-        heights.push_back(0);
-    }
-
     while((int)sites.size() - 1 + minRecursion < recursion){
         sites.push_back(emptySet);
     }
@@ -32,26 +28,17 @@ void MapNode::_increaseRecursion(int recursion){
 }
 
 int MapNode::getMaxRecursion(void){
-    int sz = (int)heights.size();
+    int sz = (int)corners.size();
     if(sz == 0) return -1;          // not yet initialised.
     return sz - 1 + minRecursion;
 }
 
-int MapNode::setHeight(int recursion, int height){
-    if(recursion < minRecursion) return -1;
-
-    if((int)heights.size() -1 < recursion - minRecursion){
-        _increaseRecursion(recursion);
-    }
-
-    heights[recursion - minRecursion] = height;
-    return height;
+void MapNode::setHeight(int height){
+    groundHeight = height;
 }
 
-int MapNode::getHeight(const int recursion){
-    if((int)sites.size() -1 < recursion - minRecursion) return -1;
-
-    return heights[recursion - minRecursion];
+int MapNode::getHeight(void){
+    return groundHeight;
 }
 
 int MapNode::pushSite(int recursion, Point site){
@@ -71,7 +58,7 @@ int MapNode::pushSite(int recursion, Point site){
 }
 
 int MapNode::numSite(int recursion){
-    int sz = (int)heights.size();
+    int sz = (int)sites.size();
     if(sz == 0) return -1;          // not yet initialised.
 
     recursion -= minRecursion;
@@ -99,7 +86,7 @@ int MapNode::pushCorner(int recursion, Point corner){
 }
 
 int MapNode::numCorner(int recursion){
-    int sz = (int)heights.size();
+    int sz = (int)corners.size();
     if(sz == 0) return -1;          // not yet initialised.
 
     recursion -= minRecursion;
@@ -194,6 +181,9 @@ void MapNode::boundingBox(const int recursion, Point& bl, Point& tr){
 }
 
 MapType MapData::MapContainer;
+Point MapData::zero;
+Point MapData::max;
+Point MapData::centre;
 int MapData::maxRecursion = 0;
 
 MapData::MapData(bool testing){
@@ -235,6 +225,10 @@ MapData::MapData(bool testing){
                 zero = insertPoint;
             }
 
+            if(firstLoop or insertPoint.x() + insertPoint.y() > max.x() + max.y()){
+                max = insertPoint;
+            }
+
             firstLoop = false;
         }
         cout << centre.x() << "," << centre.y() << "\n";
@@ -261,7 +255,9 @@ void MapData::setHeights(void){
     deque<Point> open0, open1;
     unordered_set<Point, pairHash> closed;
     open0.push_back(zero);
+    open0.push_back(max);
     closed.insert(zero);
+    closed.insert(max);
 
     Point working;
     while(!open0.empty()){
@@ -269,7 +265,7 @@ void MapData::setHeights(void){
         open0.pop_front();
         for(auto it = find(working)->second.beginSite(maxRecursion); it != find(working)->second.endSite(maxRecursion); ++it){
             if(closed.count(*it) <= 0){
-                if(find(*it)->second.getHeight(maxRecursion) > 0){
+                if(find(*it)->second.getHeight() > 0){
                     // shoreline.
                     open1.push_back(*it);
                 } else {
@@ -287,7 +283,7 @@ void MapData::setHeights(void){
             working = open1.front();
             open1.pop_front();
             if(count(working) > 0){
-                find(working)->second.setHeight(maxRecursion, 1.0 + (float)distFromSea * 500.0 / (find(working)->second.minRecursion +1));
+                find(working)->second.setHeight(1.0 + (float)distFromSea * 500.0 / (find(working)->second.minRecursion +1));
                 for(auto it = find(working)->second.beginSite(maxRecursion); it != find(working)->second.endSite(maxRecursion); ++it){
                     if(closed.count(*it) <= 0){
                         open0.push_back(*it);
@@ -303,20 +299,24 @@ void MapData::setHeights(void){
         open0.swap(open1);
     }
 
+    cout << "...\n";
+
     float totHeight;
     int numHeight;
     for(auto it = begin(); it != end(); ++it){
         if(it->second.type == TYPE_CORNER){
             totHeight = 0;
             numHeight = 0;
-            for(auto itSite = it->second.beginSite(maxRecursion); itSite != it->second.endSite(maxRecursion); ++itSite){
-                ++numHeight;
-                totHeight += find(*itSite)->second.getHeight(maxRecursion);
-            }
-            if(numHeight > 0){
-                it->second.setHeight(maxRecursion, totHeight/numHeight);
-            } else {
-                it->second.setHeight(maxRecursion, 0);
+            if(it->second.getMaxRecursion() >= maxRecursion){
+                for(auto itSite = it->second.beginSite(maxRecursion); itSite != it->second.endSite(maxRecursion); ++itSite){
+                    ++numHeight;
+                    totHeight += find(*itSite)->second.getHeight();
+                }
+                if(numHeight > 0){
+                    it->second.setHeight(totHeight/numHeight);
+                } else {
+                    it->second.setHeight(0);
+                }
             }
         }
     }
@@ -326,13 +326,15 @@ void MapData::setHeights(void){
 
 void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash> shore, std::vector<Point>& seedPoints){
     maxRecursion = recursion;
-    cout << "MapData::moreDetail... " << maxRecursion << "\n";
+    cout << "MapData::moreDetail... " << maxRecursion << " " << shore.size() << "\n";
     Point insertPoint;
     MapNode insertData;
     Point bl, tr;
     for(auto itSite = shore.begin(); itSite != shore.end(); ++itSite){
         find(*itSite)->second.boundingBox(recursion -1, bl, tr);
         for(int i = 0; i < 40; ++i){
+            if(tr.x() == bl.x() or tr.y() == bl.y()) break;
+
             insertPoint.x(bl.x() + (rand() % (tr.x() - bl.x())));
             insertPoint.y(bl.y() + (rand() % (tr.y() - bl.y())));
 
@@ -342,13 +344,16 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
             if(count(insertPoint) <= 0 and find(*itSite)->second.isInside(recursion -1, insertPoint)){
                 insertData = MapNode(insertPoint, *itSite, recursion);
                 insertData.type = TYPE_SITE;
-                insertData.setHeight(recursion, 1);
+                insertData.setHeight(1);
                 insert(insertData);
                 seedPoints.push_back(insertPoint);
             }
         }
     }
+    cout << "\n";
+    cout << "  Points added.\n";
     populateVoronoi(seedPoints, recursion);
+    cout << "  Voronoi calculated.\n";
 
     // TODO Maybe there is a better place to do this?
     deque<Point> open;
@@ -356,15 +361,15 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
     Point working;
     for(auto it = begin(); it != end(); ++it){
         if(it->second.type == TYPE_SITE){
-            if(it->second.minRecursion == recursion){
-            } else {
+            //if(it->second.minRecursion == recursion){
+            //} else {
                 // Need to copy the previous recursion level height to this recursion.
-                it->second.setHeight(recursion,  it->second.getHeight(recursion -1));
-            }
+            //    it->second.setHeight(it->second.getHeight());
+            //}
 
             //if(it->second.minRecursion == recursion -1 and it->second.getHeight(recursion -1) <= 0){
             for(int r = it->second.minRecursion; r < recursion; ++r){
-                if(it->second.getHeight(r) <= 0){
+                if(it->second.getHeight() <= 0){
                     open.clear();
                     closed.clear();
                     for(auto itSite = it->second.beginSite(recursion); itSite != it->second.endSite(recursion); ++itSite){
@@ -377,7 +382,7 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
                         working = open.front();
                         open.pop_front();
                         closed.insert(working);
-                        find(working)->second.setHeight(recursion, 0);
+                        find(working)->second.setHeight(0);
                         for(auto itSite = find(working)->second.beginSite(recursion); itSite != find(working)->second.endSite(recursion); ++itSite){
                             if(find(*itSite)->second.minRecursion == recursion and closed.count(*itSite) <= 0 and planesOverlap(recursion -1, it->first, recursion, *itSite)){
                                 open.push_back(*itSite);
@@ -388,7 +393,7 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
             }
         }
     }
-    cout << "...done\n";
+    cout << seedPoints.size() << " ...done\n";
 }
 
 bool MapData::planesOverlap(const int recursion1, Point point1, const int recursion2, Point point2){
@@ -410,7 +415,7 @@ void MapData::raiseLand(void){
             if(rand() % 100 < SEED_ISLAND and 
                     it->first.x() > AVOID_EDGE * MAP_MIN_RES and it->first.y() > AVOID_EDGE * MAP_MIN_RES and 
                     it->first.x() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES and it->first.y() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES){
-                it->second.setHeight(0, 1);
+                it->second.setHeight(1);
                 ++islandCount;
                 open.insert(it->first);
             }
@@ -418,7 +423,7 @@ void MapData::raiseLand(void){
     }
     if(islandCount == 0){
         cout << "No natural islands. Using centre point.\n";
-        MapContainer[centre].setHeight(0, 1);
+        MapContainer[centre].setHeight(1);
     }
 
 
@@ -430,7 +435,7 @@ void MapData::raiseLand(void){
                 if(rand() % 100 < GROW_ISLAND and open.count(*itSites) <= 0 and closed.count(*itSites) <= 0 and
                         itSites->x() > AVOID_EDGE * MAP_MIN_RES and itSites->y() > AVOID_EDGE * MAP_MIN_RES and
                         itSites->x() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES and itSites->y() < (MAP_SIZE - AVOID_EDGE) * MAP_MIN_RES){
-                    find(*itSites)->second.setHeight(0, 1);
+                    find(*itSites)->second.setHeight(1);
                     next.insert(*itSites);
                 }
             }
@@ -445,15 +450,16 @@ void MapData::raiseLand(void){
 std::unordered_set<Point, pairHash> MapData::getShore(const int recursion){
     std::unordered_set<Point, pairHash> open, closed, next, shore;
     open.insert(zero);
+    open.insert(max);
 
     while(open.size() > 0){
         for(auto it = open.begin(); it != open.end(); ++it){
             for(auto itSites = find(*it)->second.beginSite(recursion); itSites != find(*it)->second.endSite(recursion); ++itSites){
-                if(find(*itSites)->second.getHeight(recursion) > 0){
+                if(find(*itSites)->second.getHeight() > 0){
                     shore.insert(*itSites);
                 } else {
                     if(open.count(*itSites) <= 0 and closed.count(*itSites) <= 0){
-                        find(*itSites)->second.setHeight(recursion, -1);
+                        find(*itSites)->second.setHeight(-1);
                         next.insert(*itSites);
                     }
                 }
@@ -466,10 +472,10 @@ std::unordered_set<Point, pairHash> MapData::getShore(const int recursion){
     }
 
     for(auto it = begin(); it != end(); ++it){
-        if(it->second.getHeight(recursion) >= 0){
-            it->second.setHeight(recursion, 1);
+        if(it->second.getHeight() >= 0){
+            it->second.setHeight(1);
         } else {
-            it->second.setHeight(recursion, 0);
+            it->second.setHeight(0);
         }
     }
 
@@ -554,3 +560,72 @@ MapType::iterator MapData::begin(void){
 MapType::iterator MapData::end(void){
     return MapContainer.end();
 }
+
+Point MapData::closestSiteTo(const int recursion, Point target){
+    //cout << "MapData::closestSiteTo... " << target.x() << "," << target.y() << "\n";
+    Point working = zero;
+    Point closest = centre;
+
+    float a, b;
+    long dist, closestDist = (long)MAP_SIZE * (long)MAP_MIN_RES * (long)MAP_SIZE * (long)MAP_MIN_RES;
+    for(int r = 0; r <= recursion; ++r){
+        while(closest != working){
+            working = closest;
+            for(auto it = find(working)->second.beginSite(r); it != find(working)->second.endSite(r); ++it){
+                a = it->x() - target.x();
+                b = it->y() - target.y();
+                dist = a*a + b*b;       // this tells us the same as pythagorus but without the expensive square root.
+                if(dist < closestDist){
+                    closestDist = dist;
+                    closest = *it;
+                    //cout << closest.x() << "," << closest.y() << "\t" << closestDist << "\n";
+                }
+            }
+        }
+    }
+    //cout << "...done. " << closest.x() << "," << closest.y() << "\n";
+    return closest;
+}
+
+std::unordered_set<Point, pairHash> MapData::cornersInBox(const int recursion, Point bl, Point tr){
+    Point centre((bl.x() + tr.x())/2, (bl.y() + tr.y())/2);
+
+    deque<Point> open;
+    unordered_set<Point, pairHash> closed;
+    unordered_set<Point, pairHash> retSet;
+    open.push_back(closestSiteTo(recursion, centre));
+    //open.push_back(closestSiteTo(recursion, bl));
+    //open.push_back(closestSiteTo(recursion, tr));
+    //open.push_back(closestSiteTo(recursion, Point(bl.x(), tr.y())));
+    //open.push_back(closestSiteTo(recursion, Point(tr.x(), bl.y())));
+    
+    Point working;
+
+    while(open.size() > 0){
+        working = open.front();
+        open.pop_front();
+        for(auto it = find(working)->second.beginSite(recursion); it != find(working)->second.endSite(recursion); ++it){
+            if(it->x() >= bl.x() and it->x() <= tr.x() and it->y() >= bl.y() and it->y() <= tr.y() and closed.count(*it) == 0 and retSet.count(*it) == 0){
+                open.push_back(*it);
+                retSet.insert(*it);
+            } else if(closed.count(*it) == 0 and retSet.count(*it) == 0){
+                // Allow imediate neighbours not in retSet to contribute child sites.
+                if(closed.count(working) == 0){
+                    open.push_back(*it);
+                }
+                closed.insert(*it);
+            }
+        }
+        for(auto it = find(working)->second.beginCorner(recursion); it != find(working)->second.endCorner(recursion); ++it){
+            // 
+            if(it->x() >= bl.x() and it->x() <= tr.x() and it->y() >= bl.y() and it->y() <= tr.y() and closed.count(*it) == 0){
+                open.push_back(*it);
+                closed.insert(*it);
+            }
+        }
+    }
+    cout << closed.size() << "\t";
+    return retSet;
+}
+
+

@@ -50,11 +50,8 @@ TEST_F(MapNodeTest, InitialiseBottomLevel) {
     EXPECT_EQ(rootSite.numSite(0), -1);
     EXPECT_EQ(rootSite.numCorner(0), -1);
 
-    EXPECT_EQ(rootSite.setHeight(0, 1), 1);
-    EXPECT_EQ(rootSite.getHeight(0), 1);
-    EXPECT_EQ(rootSite.getMaxRecursion(), 0);
-    EXPECT_EQ(rootSite.numSite(0), 0);
-    EXPECT_EQ(rootSite.numCorner(0), 0);
+    rootSite.setHeight(1);
+    EXPECT_EQ(rootSite.getHeight(), 1);
 
     EXPECT_EQ(rootSite.pushSite(0, Point(0,0)), 1);
     EXPECT_EQ(rootSite.pushCorner(0, Point(0,0)), 1);
@@ -73,7 +70,6 @@ TEST_F(MapNodeTest, InitialiseBottomLevel) {
     EXPECT_EQ(1, rootSite.pushSite(1, Point(0,0)));
     EXPECT_EQ(1, rootSite.numSite(1));
     EXPECT_EQ(0, rootSite.numCorner(1));
-    EXPECT_EQ(0, rootSite.getHeight(1));
     EXPECT_EQ(1, rootSite.getMaxRecursion());
 }
 
@@ -88,38 +84,35 @@ TEST_F(MapNodeTest, InitialiseHigherLevel) {
     EXPECT_EQ(-1, childSite.numSite(0));
     EXPECT_EQ(-1, childSite.numCorner(0));
 
-    EXPECT_EQ(-1, childSite.setHeight(0, 1));           // trying to set recursion level below minimum.
-    EXPECT_EQ(-1, childSite.pushSite(0, Point(0,0)));
+    EXPECT_EQ(-1, childSite.pushSite(0, Point(0,0)));   // trying to set recursion level below minimum.
     EXPECT_EQ(-1, childSite.pushCorner(0, Point(0,0)));
     EXPECT_EQ(-1, childSite.getMaxRecursion());
     EXPECT_EQ(-1, childSite.numSite(0));
     EXPECT_EQ(-1, childSite.numCorner(0));
 
-    EXPECT_EQ(17, childSite.setHeight(1, 17));
-    EXPECT_EQ(17, childSite.getHeight(1));
-    EXPECT_EQ(1, childSite.getMaxRecursion());
-    EXPECT_EQ(0, childSite.numSite(1));
-    EXPECT_EQ(0, childSite.numCorner(1));
-
     EXPECT_EQ(1, childSite.pushSite(1, Point(1,2)));
     EXPECT_EQ(2, childSite.pushSite(1, Point(2,2)));
     EXPECT_EQ(1, childSite.getMaxRecursion());
-    EXPECT_EQ(17, childSite.getHeight(1));
     EXPECT_EQ(2, childSite.numSite(1));
     EXPECT_EQ(0, childSite.numCorner(1));
 
     EXPECT_EQ(1, childSite.pushCorner(3, Point(1,3)));
     EXPECT_EQ(2, childSite.pushCorner(3, Point(2,3)));
     EXPECT_EQ(3, childSite.getMaxRecursion());
-    EXPECT_EQ(17, childSite.getHeight(1));
     EXPECT_EQ(2, childSite.numSite(1));
     EXPECT_EQ(0, childSite.numCorner(1));
-    EXPECT_EQ(0, childSite.getHeight(2));
     EXPECT_EQ(0, childSite.numSite(2));
     EXPECT_EQ(0, childSite.numCorner(2));
-    EXPECT_EQ(0, childSite.getHeight(3));
     EXPECT_EQ(0, childSite.numSite(3));
     EXPECT_EQ(2, childSite.numCorner(3));
+}
+
+TEST_F(MapNodeTest, Height){
+    MapNode rootSite(Point(50,50), 0);
+    MapNode childSite(Point(10,10), rootSite.coordinates, 2);
+
+    childSite.setHeight(33);
+    EXPECT_EQ(33, childSite.getHeight());
 }
 
 TEST_F(MapNodeTest, Iterators) {

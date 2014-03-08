@@ -44,10 +44,10 @@ class DebugState : public AppState{
     void drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
     void drawUniqueLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
    
-    void addPlanes(const Ogre::String name){ addPlanes(name, Point(0, 0), Point(MAP_SIZE * MAP_MIN_RES, MAP_SIZE * MAP_MIN_RES)); };
-    void addPlanes(const Ogre::String name, Point bl, Point tr);
+    void addPlanes(const Ogre::String name, const int recursion){ addPlanes(name, recursion, Point(0, 0), Point(MAP_SIZE * MAP_MIN_RES, MAP_SIZE * MAP_MIN_RES)); };
+    void addPlanes(const Ogre::String name, const int recursion, Point bl, Point tr);
 
-    void addLines(const Ogre::String name, void(DebugState::*p_function)(Ogre::ManualObject*));
+    Ogre::ManualObject* addLines(const Ogre::String name, void(DebugState::*p_function)(Ogre::ManualObject*));
     void viewBox(Ogre::ManualObject* manual_lines);
     void viewCell(Ogre::ManualObject* manual_lines);
     void viewCell2(Ogre::ManualObject* manual_lines);
@@ -59,6 +59,8 @@ class DebugState : public AppState{
 
     Ogre::ColourValue landColour(float siteHeight, float height, float gradient);
     void generateScenery();
+    int zoom;
+    int debugRecursion;
 
   private:
 	Ogre::SceneNode*			m_pOgreHeadNode;

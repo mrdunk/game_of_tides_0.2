@@ -52,9 +52,9 @@ class pairHash{
 class MapNode{
     public:
         /* constructors */
-        MapNode(Point _coordinates, Point _parent, int _minRecursion) : coordinates(_coordinates), parent(_parent), minRecursion(_minRecursion) {}
-        MapNode(Point _coordinates, int _minRecursion) : coordinates(_coordinates), minRecursion(_minRecursion) {}
-        MapNode(void) {};
+        MapNode(Point _coordinates, Point _parent, int _minRecursion) : coordinates(_coordinates), parent(_parent), minRecursion(_minRecursion), groundHeight(0) { }
+        MapNode(Point _coordinates, int _minRecursion) : coordinates(_coordinates), minRecursion(_minRecursion), groundHeight(0) { }
+        MapNode(void) : groundHeight(0) { };
         
         int type;
         Point coordinates;
@@ -72,8 +72,8 @@ class MapNode{
         vector<Point>::iterator endCorner(const int recursion);
         int numCorner(int recursion);
 
-        int setHeight(int recursion, int height);
-        int getHeight(const int recursion);
+        void setHeight(int height);
+        int getHeight(void);
 
         /* Only used for type == TYPE_SITE.
          * returns true if point is inside the polygon described by corners.
@@ -83,7 +83,7 @@ class MapNode{
         void boundingBox(const int recursion, Point& bl, Point& tr);
     private:
         void _increaseRecursion(int recursion);
-        vector<int> heights;
+        int groundHeight;
         vector<vector<Point> > sites;
         vector<vector<Point> > corners;
 };
@@ -98,10 +98,10 @@ class MapData{
         static MapType MapContainer;
         
         // Key to the entry closest to the map centre.
-        Point centre;
+        static Point centre;
 
-        // Key to  entry closest to the 0,0 coordinate.
-        Point zero;
+        // Key to  entry closest to the 0,0 coordinate and MAP_SIZE,MAP_SIZE coordinate.
+        static Point zero, max;
 
         // Data has been generated to this level.
         static int maxRecursion;
@@ -120,6 +120,11 @@ class MapData{
         void setHeights(void);
 
         bool planesOverlap(const int recursion1, Point point1, const int recursion2, Point point2);
+
+        Point closestTo(const int recursion, Point target);
+        Point closestSiteTo(const int recursion, Point target);
+        Point closestCornerTo(const int recursion, Point target);
+        std::unordered_set<Point, pairHash> cornersInBox(const int recursion, Point bl, Point tr);
 };
 
 #endif
