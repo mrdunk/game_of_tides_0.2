@@ -181,8 +181,6 @@ void MapNode::boundingBox(const int recursion, Point& bl, Point& tr){
 }
 
 MapType MapData::MapContainer;
-Point MapData::zero;
-Point MapData::max;
 Point MapData::centre;
 int MapData::maxRecursion = 0;
 
@@ -221,18 +219,9 @@ MapData::MapData(bool testing){
                 centre = insertPoint;
             }
 
-            if(firstLoop or insertPoint.x() + insertPoint.y() < zero.x() + zero.y()){
-                zero = insertPoint;
-            }
-
-            if(firstLoop or insertPoint.x() + insertPoint.y() > max.x() + max.y()){
-                max = insertPoint;
-            }
-
             firstLoop = false;
         }
         cout << centre.x() << "," << centre.y() << "\n";
-        cout << zero.x() << "," << zero.y() << "\n";
 
         populateVoronoi(seedPoints, 0);
 
@@ -254,10 +243,21 @@ void MapData::setHeights(void){
     cout << "MapData::setHeights.... " << maxRecursion << "\n";
     deque<Point> open0, open1;
     unordered_set<Point, pairHash> closed;
-    open0.push_back(zero);
-    open0.push_back(max);
-    closed.insert(zero);
-    closed.insert(max);
+
+    Point bl = closestSiteTo(0, Point(0, 0));
+    Point br = closestSiteTo(0, Point(MAP_SIZE * MAP_MIN_RES, 0));
+    Point tl = closestSiteTo(0, Point(0, MAP_SIZE * MAP_MIN_RES));
+    Point tr = closestSiteTo(0, Point(MAP_SIZE * MAP_MIN_RES, MAP_SIZE * MAP_MIN_RES));
+    
+    open0.push_back(bl);
+    open0.push_back(br);
+    open0.push_back(tl);
+    open0.push_back(tr);
+
+    closed.insert(bl);
+    closed.insert(br);
+    closed.insert(tl);
+    closed.insert(tr);
 
     Point working;
     while(!open0.empty()){
@@ -449,8 +449,16 @@ void MapData::raiseLand(void){
 
 std::unordered_set<Point, pairHash> MapData::getShore(const int recursion){
     std::unordered_set<Point, pairHash> open, closed, next, shore;
-    open.insert(zero);
-    open.insert(max);
+
+    Point bl = closestSiteTo(0, Point(0, 0));
+    Point br = closestSiteTo(0, Point(MAP_SIZE * MAP_MIN_RES, 0));
+    Point tl = closestSiteTo(0, Point(0, MAP_SIZE * MAP_MIN_RES));
+    Point tr = closestSiteTo(0, Point(MAP_SIZE * MAP_MIN_RES, MAP_SIZE * MAP_MIN_RES));
+
+    open.insert(bl);
+    open.insert(br);
+    open.insert(tl);
+    open.insert(tr);
 
     while(open.size() > 0){
         for(auto it = open.begin(); it != open.end(); ++it){
@@ -563,7 +571,7 @@ MapType::iterator MapData::end(void){
 
 Point MapData::closestSiteTo(const int recursion, Point target){
     //cout << "MapData::closestSiteTo... " << target.x() << "," << target.y() << "\n";
-    Point working = zero;
+    Point working = Point(0, 0);
     Point closest = centre;
 
     float a, b;

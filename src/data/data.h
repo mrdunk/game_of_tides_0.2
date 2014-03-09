@@ -100,9 +100,6 @@ class MapData{
         // Key to the entry closest to the map centre.
         static Point centre;
 
-        // Key to  entry closest to the 0,0 coordinate and MAP_SIZE,MAP_SIZE coordinate.
-        static Point zero, max;
-
         // Data has been generated to this level.
         static int maxRecursion;
 
