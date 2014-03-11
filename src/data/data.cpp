@@ -355,26 +355,22 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
     populateVoronoi(seedPoints, recursion);
     cout << "  Voronoi calculated.\n";
 
+    // Set heights.
     // TODO Maybe there is a better place to do this?
     deque<Point> open;
     unordered_set<Point, pairHash> closed;
     Point working;
     for(auto it = begin(); it != end(); ++it){
         if(it->second.type == TYPE_SITE){
-            //if(it->second.minRecursion == recursion){
-            //} else {
-                // Need to copy the previous recursion level height to this recursion.
-            //    it->second.setHeight(it->second.getHeight());
-            //}
-
             //if(it->second.minRecursion == recursion -1 and it->second.getHeight(recursion -1) <= 0){
             for(int r = it->second.minRecursion; r < recursion; ++r){
                 if(it->second.getHeight() <= 0){
                     open.clear();
                     closed.clear();
+
+                    // Check for parent overlap with neghbouring cells.
                     for(auto itSite = it->second.beginSite(recursion); itSite != it->second.endSite(recursion); ++itSite){
                         if(find(*itSite)->second.minRecursion == recursion and planesOverlap(recursion -1, it->first, recursion, *itSite)){
-                            //find(*itSite)->second.setHeight(recursion, 0);
                             open.push_back(*itSite);
                         }
                     }
@@ -383,6 +379,8 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
                         open.pop_front();
                         closed.insert(working);
                         find(working)->second.setHeight(0);
+
+                        // Check for parent overlap with cells 2 neghbours away.
                         for(auto itSite = find(working)->second.beginSite(recursion); itSite != find(working)->second.endSite(recursion); ++itSite){
                             if(find(*itSite)->second.minRecursion == recursion and closed.count(*itSite) <= 0 and planesOverlap(recursion -1, it->first, recursion, *itSite)){
                                 open.push_back(*itSite);
@@ -448,42 +446,39 @@ void MapData::raiseLand(void){
 }
 
 std::unordered_set<Point, pairHash> MapData::getShore(const int recursion){
-    std::unordered_set<Point, pairHash> open, closed, next, shore;
+    //cout << "MapData::getShore...\n";
+    std::unordered_set<Point, pairHash> closed, shore;
+    std::deque<Point> open;
 
     Point bl = closestSiteTo(0, Point(0, 0));
     Point br = closestSiteTo(0, Point(MAP_SIZE * MAP_MIN_RES, 0));
     Point tl = closestSiteTo(0, Point(0, MAP_SIZE * MAP_MIN_RES));
     Point tr = closestSiteTo(0, Point(MAP_SIZE * MAP_MIN_RES, MAP_SIZE * MAP_MIN_RES));
 
-    open.insert(bl);
-    open.insert(br);
-    open.insert(tl);
-    open.insert(tr);
+    open.push_back(bl);
+    open.push_back(br);
+    open.push_back(tl);
+    open.push_back(tr);
 
+    closed.insert(bl);
+    closed.insert(br);
+    closed.insert(tl);
+    closed.insert(tr);
+
+    Point working;
     while(open.size() > 0){
-        for(auto it = open.begin(); it != open.end(); ++it){
-            for(auto itSites = find(*it)->second.beginSite(recursion); itSites != find(*it)->second.endSite(recursion); ++itSites){
-                if(find(*itSites)->second.getHeight() > 0){
-                    shore.insert(*itSites);
-                } else {
-                    if(open.count(*itSites) <= 0 and closed.count(*itSites) <= 0){
-                        find(*itSites)->second.setHeight(-1);
-                        next.insert(*itSites);
-                    }
+        working = open.front();
+        open.pop_front();
+        for(auto itSites = find(working)->second.beginSite(recursion); itSites != find(working)->second.endSite(recursion); ++itSites){
+            if(find(*itSites)->second.getHeight() > 0){
+                shore.insert(*itSites);
+            } else {
+                if(closed.count(*itSites) <= 0 and shore.count(*itSites) <= 0){
+                    find(*itSites)->second.setHeight(0);
+                    open.push_back(*itSites);
+                    closed.insert(*itSites);
                 }
             }
-            closed.insert(*it);
-        }
-
-        next.swap(open);
-        next.clear();
-    }
-
-    for(auto it = begin(); it != end(); ++it){
-        if(it->second.getHeight() >= 0){
-            it->second.setHeight(1);
-        } else {
-            it->second.setHeight(0);
         }
     }
 

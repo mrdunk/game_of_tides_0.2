@@ -43,7 +43,7 @@ void DebugState::enter()
     m_pCamera = m_pSceneMgr->createCamera("GameCamera");
     //m_pCamera->setPosition(Vector3(5, 60, 60));
     //m_pCamera->lookAt(Vector3(5, 20, 0));
-    m_pCamera->setNearClipDistance(1);
+    m_pCamera->setNearClipDistance(0.01);
 
     m_pCamera->setPosition(MAP_SIZE/2, MAP_SIZE, MAP_SIZE/2);
     m_pCamera->lookAt(MAP_SIZE/2, 0, MAP_SIZE/2);
@@ -155,7 +155,7 @@ void DebugState::viewCell2(ManualObject* manual_lines){
             if(it->second.numCorner(recursion) > 0){
                 started = false;
                 for(auto itCorner = it->second.beginCorner(recursion); itCorner != it->second.endCorner(recursion); ++itCorner){
-                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, ((float)data.find(*itCorner)->second.getHeight() / MAP_MIN_RES) +1, 
+                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, ((float)data.find(*itCorner)->second.getHeight() / MAP_MIN_RES) +10, 
                                      (float)itCorner->y() / MAP_MIN_RES);
                     if(!started){
                         started = true;
@@ -219,15 +219,23 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
             //if(it->second.numCorner(recursion) > 0){
             if(data.find(*it)->second.numCorner(recursion) > 0){
                 //site = Vector3((float)it->first.x() / MAP_MIN_RES, (float)it->second.getHeight() / MAP_MIN_RES, (float)it->first.y() / MAP_MIN_RES);
-                site = Vector3((float)it->x() / MAP_MIN_RES, (float)data.find(*it)->second.getHeight() / MAP_MIN_RES, (float)it->y() / MAP_MIN_RES);
+                if(debugRecursion >= 0){
+                    site = Vector3((float)it->x() / MAP_MIN_RES, (float)(data.find(*it)->second.getHeight() > 0), (float)it->y() / MAP_MIN_RES);
+                } else {
+                    site = Vector3((float)it->x() / MAP_MIN_RES, (float)data.find(*it)->second.getHeight() / MAP_MIN_RES, (float)it->y() / MAP_MIN_RES);
+                }
                 manual_planes->position(site);
                 manual_planes->colour(landColour(site.y, site.y, 1));
                 manual_planes->normal(0,1,0);
                 cornerCount = 0;
                 //for(auto itCorner = it->second.beginCorner(recursion); itCorner != it->second.endCorner(recursion); ++itCorner){
                 for(auto itCorner = data.find(*it)->second.beginCorner(recursion); itCorner != data.find(*it)->second.endCorner(recursion); ++itCorner){
-                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)data.find(*itCorner)->second.getHeight() / MAP_MIN_RES, 
-                        (float)itCorner->y() / MAP_MIN_RES);
+                    if(debugRecursion >= 0){
+                        corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)(data.find(*itCorner)->second.getHeight() > 0), (float)itCorner->y() / MAP_MIN_RES);
+                    } else {
+                        corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)data.find(*itCorner)->second.getHeight() / MAP_MIN_RES, 
+                                (float)itCorner->y() / MAP_MIN_RES);
+                    }
 
                     // calculate normal for this point.
                     Ogre::Vector3 dir0 = site - corner;
@@ -253,21 +261,6 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
 
     m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual_planes);
 
-    /*manual_planes->convertToMesh("test.mesh.planes");
-    Entity *ent1 = m_pSceneMgr->createEntity("planes", "test.mesh.planes");
-    m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(ent1);
-    
-    //m_pSceneMgr->destroyAllStaticGeometry();
-    Ogre::StaticGeometry *sg = m_pSceneMgr->createStaticGeometry("WorldMapArea");
-
-    sg->setRegionDimensions(Ogre::Vector3(MAP_SIZE, MAP_SIZE, MAP_SIZE));
-    sg->setOrigin(Ogre::Vector3(MAP_SIZE/2, 0, MAP_SIZE/2));
-
-    Ogre::Quaternion rot0;
-    rot0.FromAngleAxis(Ogre::Degree(0), Ogre::Vector3::UNIT_Y);
-    sg->addEntity(ent1, Ogre::Vector3(0,0,0), rot0, Ogre::Vector3(1,1,1));
-
-    sg->build();*/
 }
 
 Ogre::ColourValue DebugState::landColour(float siteHeight, float height, float gradient){
@@ -290,11 +283,14 @@ void DebugState::createScene(){
 
     initMaterial();
 
-    addLines("screenOutline", &DebugState::viewBox);
-    addLines("cells", &DebugState::viewCell);
+    //addLines("screenOutline", &DebugState::viewBox);
+    //addLines("cells", &DebugState::viewCell);
     //addLines("cells2", &DebugState::viewCell2);
     //addPlanes("planes", data.maxRecursion);
-    
+
+    // Set this so scenery re-generates.
+    regenScene = true;
+    debugRecursion = -1;
 
     return;
 }
@@ -381,15 +377,22 @@ bool DebugState::keyPressed(const OIS::KeyEvent &keyEventRef)
 
     if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_TAB))
     {
-        //m_bSettingsMode = !m_bSettingsMode;
-        //return true;
-        //Entity* line = m_pSceneMgr->getRootSceneNode()->getEntity("line");
-        ManualObject* lines = m_pSceneMgr->getManualObject("screenOutline");
-        lines->setVisible(!lines->getVisible());
-        lines = m_pSceneMgr->getManualObject("cells");
-        lines->setVisible(!lines->getVisible());
-        //lines = m_pSceneMgr->getManualObject("cells2");
-        //lines->setVisible(!lines->getVisible());
+        ManualObject* lines;
+
+        try {
+            lines = m_pSceneMgr->getManualObject("screenOutline");
+            lines->setVisible(!lines->getVisible());
+        } catch (Ogre::Exception ex) {
+            lines = addLines("screenOutline", &DebugState::viewBox);
+        }
+
+        try {
+            lines = m_pSceneMgr->getManualObject("cells");
+            lines->setVisible(!lines->getVisible());
+        } catch (Ogre::Exception ex) {
+            lines = addLines("cells", &DebugState::viewCell);
+        }
+
     }
 
     if((m_bSettingsMode && OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_RETURN)) ||
@@ -494,32 +497,32 @@ void DebugState::getInput()
     {
         if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_A)){
             m_TranslateVector.x = -m_MoveScale;
-            hasMoved = true;
+            regenScene = true;
         }
 
         if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_D)){
             m_TranslateVector.x = m_MoveScale;
-            hasMoved = true;
+            regenScene = true;
         }
 
         if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_E)){
             m_TranslateVector.y = -m_MoveScale;
-            hasMoved = true;
+            regenScene = true;
         }
 
         if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_Q)){
             m_TranslateVector.y = m_MoveScale;
-            hasMoved = true;
+            regenScene = true;
         }
 
         if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_W)){
             m_TranslateVector.z = -m_MoveScale;
-            hasMoved = true;
+            regenScene = true;
         }
 
         if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_S)){
             m_TranslateVector.z = m_MoveScale;
-            hasMoved = true;
+            regenScene = true;
         }
 
     }
@@ -580,12 +583,12 @@ void DebugState::generateScenery(){
     static std::unordered_set<int> todoTiles;
     static std::unordered_set<int> doneTiles;
 
-    if(hasMoved){
-        hasMoved = false;
+    if(regenScene){
+        regenScene = false;
         todoTiles.clear();
         if(m_pCamera->getDerivedPosition().y >= 1){
             int newZoom = MAP_SIZE / (int)m_pCamera->getDerivedPosition().y;
-            if(newZoom < 1) newZoom = 1;
+            if(newZoom < 0) newZoom = 0;
             if(newZoom > data.maxRecursion) newZoom = data.maxRecursion;
             if(newZoom != zoom){
                 zoom = newZoom;
@@ -661,11 +664,14 @@ void DebugState::itemSelected(OgreBites::SelectMenu* menu)
     switch(menu->getSelectionIndex())
     {
         case 0:
+            debugRecursion = -1;
+            regenScene = true;
             lines = m_pSceneMgr->getManualObject("cells2");
             lines->setVisible(false);
             break;
         default:
             debugRecursion = menu->getSelectionIndex() -1;
+            regenScene = true;
             lines = addLines("cells2", &DebugState::viewCell2);
             lines->setVisible(true);
             break;

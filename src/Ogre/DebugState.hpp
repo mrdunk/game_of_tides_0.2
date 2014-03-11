@@ -85,7 +85,7 @@ class DebugState : public AppState{
 
     MapData                     data;
 
-    bool                        hasMoved;
+    bool                        regenScene;
 };
 
 //|||||||||||||||||||||||||||||||||||||||||||||||

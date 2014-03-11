@@ -118,9 +118,9 @@ class MapData{
 
         bool planesOverlap(const int recursion1, Point point1, const int recursion2, Point point2);
 
-        Point closestTo(const int recursion, Point target);
+        //Point closestTo(const int recursion, Point target);
         Point closestSiteTo(const int recursion, Point target);
-        Point closestCornerTo(const int recursion, Point target);
+        //Point closestCornerTo(const int recursion, Point target);
         std::unordered_set<Point, pairHash> cornersInBox(const int recursion, Point bl, Point tr);
 };
 
