@@ -210,15 +210,12 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
     Vector3 site, corner, normal;
     manual_planes->begin("SolidColour", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     int cornerCount;
+
+    //TODO: replace corners list with an itterator.
     unordered_set<Point, pairHash> corners = data.cornersInBox(recursion, bl, tr);
 
-    //for(auto it = data.MapContainer.begin(); it != data.MapContainer.end(); ++it){
     for(auto it = corners.begin(); it != corners.end(); ++it){
-        //if(it->second.type == TYPE_SITE and it->second.minRecursion <= recursion and 
-        //        it->first.x() >= bl.x() and it->first.x() < tr.x() and it->first.y() >= bl.y() and it->first.y() < tr.y()){
-            //if(it->second.numCorner(recursion) > 0){
             if(data.find(*it)->second.numCorner(recursion) > 0){
-                //site = Vector3((float)it->first.x() / MAP_MIN_RES, (float)it->second.getHeight() / MAP_MIN_RES, (float)it->first.y() / MAP_MIN_RES);
                 if(debugRecursion >= 0){
                     site = Vector3((float)it->x() / MAP_MIN_RES, (float)(data.find(*it)->second.getHeight() > 0), (float)it->y() / MAP_MIN_RES);
                 } else {
@@ -228,7 +225,6 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
                 manual_planes->colour(landColour(site.y, site.y, 1));
                 manual_planes->normal(0,1,0);
                 cornerCount = 0;
-                //for(auto itCorner = it->second.beginCorner(recursion); itCorner != it->second.endCorner(recursion); ++itCorner){
                 for(auto itCorner = data.find(*it)->second.beginCorner(recursion); itCorner != data.find(*it)->second.endCorner(recursion); ++itCorner){
                     if(debugRecursion >= 0){
                         corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)(data.find(*itCorner)->second.getHeight() > 0), (float)itCorner->y() / MAP_MIN_RES);
@@ -254,7 +250,6 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
                 manual_planes->triangle(vertexCount, vertexCount +1, vertexCount + cornerCount);
                 vertexCount += cornerCount +1;
             }
-        //}
     }
 
     manual_planes->end();
@@ -291,8 +286,6 @@ void DebugState::createScene(){
     // Set this so scenery re-generates.
     regenScene = true;
     debugRecursion = -1;
-
-    return;
 }
 
 void DebugState::initMaterial(void){

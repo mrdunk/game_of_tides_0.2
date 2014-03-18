@@ -42,15 +42,13 @@ public:
 	void update(double timeSinceLastFrame);
 
     void initMaterial(void);
-    void generateScenery(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines);
-    void drawLine(Ogre::ManualObject* mo, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
-    void drawHill(Ogre::ManualObject* manual_planes, Ogre::ManualObject* manual_lines, MapNode* centre);
-    Ogre::ColourValue colour(int cornerHeight, int terrain);
-
-    /* Calculate the area of the map currently under the viewport.
-     * This assmess the cmaera is pointing straight down.
-     */
-    void calculateViewedMap(float& lowX, float& lowY, float& highX, float& highY);
+    void viewBox(Ogre::ManualObject* manual_lines);
+    void viewBoatLines(Ogre::ManualObject* manual_lines);
+    void viewBoatPlanes(Ogre::ManualObject* manual_planes);
+    Ogre::ManualObject* addLines(const Ogre::String name, void(GameState::*p_function)(Ogre::ManualObject*));
+    Ogre::ManualObject* addPlanes(const Ogre::String name, void(GameState::*p_function)(Ogre::ManualObject*));
+    void drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
+    void drawBoat(void);
 
 private:
 	Ogre::SceneNode*			m_pOgreHeadNode;
