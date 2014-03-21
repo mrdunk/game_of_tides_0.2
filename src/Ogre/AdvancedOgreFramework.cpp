@@ -134,7 +134,7 @@ paramList.insert(std::make_pair(std::string("XAutoRepeatOn"), std::string("true"
 
 bool OgreFramework::keyPressed(const OIS::KeyEvent &keyEventRef)
 {
-    if(m_pKeyboard->isKeyDown(OIS::KC_SYSRQ))
+    if(m_pKeyboard->isKeyDown(OIS::KC_P))
     {
         m_pRenderWnd->writeContentsToTimestampedFile("AOF_Screenshot_", ".jpg");
         return true;

@@ -469,6 +469,56 @@ void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
         manual_planes->triangle(posCount -1, posCount -2, posCount -3);
         manual_planes->triangle(posCount -4, posCount -8, posCount -7);
         manual_planes->triangle(posCount -4, posCount -7, posCount -3);
+
+        Ogre::Vector3 tl, tr, bl, br;
+        for(auto itSail = itMast->sails.begin(); itSail != itMast->sails.end(); ++itSail){
+            if(itSail->type == SAIL_MAIN){
+                bl = Ogre::Vector3(0, itSail->footHeight - itSail->footPosition * sin(3.15 * itSail->footAngle / 180), 
+                                      itMast->position - itSail->footPosition * cos(3.15 * itSail->footAngle / 180) + thicknes);
+                br = Ogre::Vector3(0, itSail->footHeight + (itSail->footLength - itSail->footPosition) * sin(3.15 * itSail->footAngle / 180), 
+                                      itMast->position + (itSail->footLength - itSail->footPosition) * cos(3.15 * itSail->footAngle / 180) + thicknes);
+                tl = Ogre::Vector3(0, itSail->headHeight - itSail->headPosition * sin(3.15 * itSail->headAngle / 180),
+                                      itMast->position - itSail->headPosition * cos(3.15 * itSail->headAngle / 180) + thicknes);
+                tr = Ogre::Vector3(0, itSail->headHeight + (itSail->headLength - itSail->headPosition) * sin(3.15 * itSail->headAngle / 180),
+                                      itMast->position + (itSail->headLength - itSail->headPosition) * cos(3.15 * itSail->headAngle / 180) + thicknes);
+            }
+            if(bl != br){
+                manual_planes->position(bl);
+                manual_planes->colour(ColourValue(1, 1, 1));
+                manual_planes->normal(0,1,0);
+
+                manual_planes->position(br);
+                manual_planes->colour(ColourValue(1, 1, 1));
+                manual_planes->normal(0,1,0);
+
+                manual_planes->position(tl);
+                manual_planes->colour(ColourValue(1, 1, 1));
+                manual_planes->normal(0,1,0);
+
+                posCount += 3;
+
+                manual_planes->triangle(posCount -3, posCount -2, posCount -1);
+                manual_planes->triangle(posCount -3, posCount -1, posCount -2);
+            }
+            if(tl != tr){
+                manual_planes->position(br);
+                manual_planes->colour(ColourValue(1, 0.8, 1));
+                manual_planes->normal(0,1,0);
+
+                manual_planes->position(tl);
+                manual_planes->colour(ColourValue(1, 0.8, 1));
+                manual_planes->normal(0,1,0);
+
+                manual_planes->position(tr);
+                manual_planes->colour(ColourValue(1, 0.8, 1));
+                manual_planes->normal(0,1,0);
+
+                posCount += 3;
+
+                manual_planes->triangle(posCount -3, posCount -2, posCount -1);
+                manual_planes->triangle(posCount -3, posCount -1, posCount -2);
+            }
+        }
     }
 
 }
