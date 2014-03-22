@@ -30,6 +30,10 @@ struct Sail{
     int                                     footSpar;       // Does the sail have a boom? True or false.
     int                                     headSpar;       // Does the sail have a gaff? True or false.
     int                                     reefPoints;     // 
+    int                                     aoa;            // Anle of Atack.
+
+    Ogre::Vector3                           bl, br, tl, tr;
+    void                                    update(Mast &mast);
 };
 
 struct Vessel{
@@ -37,6 +41,10 @@ struct Vessel{
 
     std::vector<struct HullSection>     sections;
     std::vector<struct Mast>            masts;
+
+    Ogre::Vector3                       midPoint;
+    void                                update(void);
+    void                                update(int aoa);    // Update all sails on boat to new AoA.
 };
 
 

@@ -2,7 +2,59 @@
 
 #include "boats.h"
 
+void Vessel::update(void){
+    Vessel::update(50);
+}
 
+void Vessel::update(int aoa){
+    float lowLen = 9999999, highLen = -9999999;
+    for(auto itSection = sections.begin(); itSection != sections.end(); ++itSection){
+        if(itSection->position > highLen) highLen = itSection->position;
+        if(itSection->position < lowLen) lowLen = itSection->position;
+    }
+
+    midPoint = Ogre::Vector3(0, lowLen + highLen, lowLen + highLen / 2);
+
+    for(auto itMasts = masts.begin(); itMasts != masts.end(); ++itMasts){
+        for(auto itSails = itMasts->sails.begin(); itSails != itMasts->sails.end(); ++itSails){
+            itSails->aoa = aoa;
+            itSails->update(*itMasts);
+        }
+    }
+}
+
+
+void Sail::update(Mast& mast){
+    float thicknes = mast.height / 100;
+    if(type == SAIL_MAIN or type == SAIL_FORE){
+        bl = Ogre::Vector3(0, footHeight - footPosition * sin(3.15 * footAngle / 180),
+                mast.position - footPosition * cos(3.15 * footAngle / 180) + thicknes);
+        br = Ogre::Vector3(0, footHeight + (footLength - footPosition) * sin(3.15 * footAngle / 180),
+                mast.position + (footLength - footPosition) * cos(3.15 * footAngle / 180) + thicknes);
+        tl = Ogre::Vector3(0, headHeight - headPosition * sin(3.15 * headAngle / 180),
+                mast.position - headPosition * cos(3.15 * headAngle / 180) + thicknes);
+        tr = Ogre::Vector3(0, headHeight + (headLength - headPosition) * sin(3.15 * headAngle / 180),
+                mast.position + (headLength - headPosition) * cos(3.15 * headAngle / 180) + thicknes);
+    } else {
+        // TODO: type == SAIL_SQUARE 
+    }
+
+    Ogre::Quaternion rotation(Ogre::Degree(aoa), Ogre::Vector3::UNIT_Y);
+
+    Ogre::Vector3 rotatePos(0, 0, mast.position);
+    if(footSpar == 0){
+        rotatePos = bl;     // rotate round tack rather than mast.
+    }
+    bl = (rotation * (bl - rotatePos)) + rotatePos;
+    br = (rotation * (br - rotatePos)) + rotatePos;
+
+    rotatePos = Ogre::Vector3(0, 0, mast.position);
+    if(headSpar == 0){
+        rotatePos = tl;
+    }
+    tl = (rotation * (tl - rotatePos)) + rotatePos;
+    tr = (rotation * (tr - rotatePos)) + rotatePos;
+}
 
 Vessel testBoat(void){
     Vessel returnBoat;
@@ -83,19 +135,35 @@ Vessel testBoat(void){
     m2.position = 7.5;
     m2.height = 8;
 
-    Sail sail1, sail2;
+    Sail sail1, sail2, sail3;
 
     sail1.type = SAIL_MAIN;
     sail1.footHeight = 1.2;
     sail1.headHeight = 9;
     sail1.footLength = 6;
-    sail1.headLength = 6;
+    sail1.headLength = 5;
     sail1.footPosition = 2;
-    sail1.headPosition = 2;
+    sail1.headPosition = 1;
     sail1.footAngle = 0;
     sail1.headAngle = 40;
+    sail1.footSpar = 0;
+    sail1.headSpar = 1;
 
     m1.sails.push_back(sail1);
+
+    sail3.type = SAIL_FORE;
+    sail3.footHeight = 1.2;
+    sail3.headHeight = 7;
+    sail3.footLength = 4;
+    sail3.headLength = 0;
+    sail3.footPosition = 4;
+    sail3.headPosition = 1.5;
+    sail3.footAngle = 0;
+    sail3.headAngle = 0;
+    sail3.footSpar = 0;
+    sail3.headSpar = 0;
+
+    m1.sails.push_back(sail3);
 
 
     sail2.type = SAIL_MAIN;
@@ -107,6 +175,8 @@ Vessel testBoat(void){
     sail2.headPosition = 1;
     sail2.footAngle = 0;
     sail2.headAngle = 40;
+    sail2.footSpar = 0;
+    sail2.headSpar = 1;
 
     m2.sails.push_back(sail2);
 
@@ -115,6 +185,7 @@ Vessel testBoat(void){
     returnBoat.masts.push_back(m2);
 
 
+    returnBoat.update();
 
     return returnBoat;
 }

@@ -9,6 +9,7 @@
 #include <utility>      // std::pair, std::make_pair
 #include "../data/boats.h"
 #include "../data/boats.cpp"
+#include "DrawThings.cpp"
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -80,6 +81,8 @@ void GameState::enter()
 
     OgreFramework::getSingletonPtr()->m_pViewport->setCamera(m_pCamera);
     m_pCurrentObject = 0;
+
+    boat = testBoat();
 
     buildGUI();
 }
@@ -156,7 +159,7 @@ void GameState::viewBoatLines(Ogre::ManualObject* manual_lines){
     Vessel boat = testBoat();
     cout << boat.description << "\n";
 
-    HullSection* lastSection;
+    HullSection* lastSection = &(boat.sections.back());
     for(auto itSection = boat.sections.begin(); itSection != boat.sections.end(); ++itSection){
         std::pair<float,float>* previousPanel = &(*(itSection->widthHeight.begin()));
         for(auto itPanel = itSection->widthHeight.begin();  itPanel != itSection->widthHeight.end(); ++itPanel){
@@ -200,11 +203,10 @@ void GameState::viewBoatLines(Ogre::ManualObject* manual_lines){
 }
 
 void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
-    Vessel boat = testBoat();
     cout << boat.description << "\n";
 
     int posCount = 0;
-    HullSection* lastSection;
+    HullSection* lastSection = &(boat.sections.back());
     Ogre::Vector3 c1, c2, c3, c4, dir0, dir1, normalInsideStarboard, normalOutsideStarboard, normalInsidePort, normalOutsidePort, normal;
     for(auto itSection = boat.sections.begin(); itSection != boat.sections.end(); ++itSection){
             std::pair<float,float>* previousPanelFore = &(*(lastSection->widthHeight.begin()));
@@ -401,97 +403,24 @@ void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
     Ogre::Vector3 c5, c6, c7, c8;
     for(auto itMast = boat.masts.begin(); itMast != boat.masts.end(); ++itMast){
         cout << "m\n";
-        float thicknes = itMast->height / 100;
-        c1 = Ogre::Vector3(thicknes, 0, itMast->position - thicknes);
-        c2 = Ogre::Vector3(thicknes, itMast->height, itMast->position - thicknes);
-        c3 = Ogre::Vector3(-thicknes, 0, itMast->position - thicknes);
-        c4 = Ogre::Vector3(-thicknes, itMast->height, itMast->position - thicknes);
-        c5 = Ogre::Vector3(thicknes, 0, itMast->position + thicknes);
-        c6 = Ogre::Vector3(thicknes, itMast->height, itMast->position + thicknes);
-        c7 = Ogre::Vector3(-thicknes, 0, itMast->position + thicknes);
-        c8 = Ogre::Vector3(-thicknes, itMast->height, itMast->position + thicknes);
-
-        dir0 = c3 - c5;
-        dir1 = c3 - c4;
-        normal = dir1.crossProduct(dir0).normalisedCopy();
-
-        manual_planes->position(Ogre::Vector3(c1));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        manual_planes->position(Ogre::Vector3(c2));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        dir0 = c7 - c1;
-        dir1 = c7 - c8;
-        normal = dir1.crossProduct(dir0).normalisedCopy();
-
-        manual_planes->position(Ogre::Vector3(c3));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        manual_planes->position(Ogre::Vector3(c4));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        dir0 = c1 - c7;
-        dir1 = c1 - c2;
-        normal = dir1.crossProduct(dir0).normalisedCopy();
-
-        manual_planes->position(Ogre::Vector3(c5));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        manual_planes->position(Ogre::Vector3(c6));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        dir0 = c5 - c3;
-        dir1 = c5 - c6;
-        normal = dir1.crossProduct(dir0).normalisedCopy();
-
-        manual_planes->position(Ogre::Vector3(c7));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        manual_planes->position(Ogre::Vector3(c8));
-        manual_planes->colour(ColourValue(0.5, 0.5, 1));
-        manual_planes->normal(normal);
-
-        posCount += 8;
-
-        manual_planes->triangle(posCount -6, posCount -7, posCount -8);
-        manual_planes->triangle(posCount -7, posCount -6, posCount -5);
-        manual_planes->triangle(posCount -2, posCount -5, posCount -6);
-        manual_planes->triangle(posCount -1, posCount -5, posCount -2);
-        manual_planes->triangle(posCount -2, posCount -4, posCount -3);
-        manual_planes->triangle(posCount -1, posCount -2, posCount -3);
-        manual_planes->triangle(posCount -4, posCount -8, posCount -7);
-        manual_planes->triangle(posCount -4, posCount -7, posCount -3);
+        drawSpar(manual_planes, posCount, Ogre::Vector3(0.0, 0.0, itMast->position), Ogre::Vector3(0.0, itMast->height, itMast->position));
 
         Ogre::Vector3 tl, tr, bl, br;
         for(auto itSail = itMast->sails.begin(); itSail != itMast->sails.end(); ++itSail){
-            if(itSail->type == SAIL_MAIN){
-                bl = Ogre::Vector3(0, itSail->footHeight - itSail->footPosition * sin(3.15 * itSail->footAngle / 180), 
-                                      itMast->position - itSail->footPosition * cos(3.15 * itSail->footAngle / 180) + thicknes);
-                br = Ogre::Vector3(0, itSail->footHeight + (itSail->footLength - itSail->footPosition) * sin(3.15 * itSail->footAngle / 180), 
-                                      itMast->position + (itSail->footLength - itSail->footPosition) * cos(3.15 * itSail->footAngle / 180) + thicknes);
-                tl = Ogre::Vector3(0, itSail->headHeight - itSail->headPosition * sin(3.15 * itSail->headAngle / 180),
-                                      itMast->position - itSail->headPosition * cos(3.15 * itSail->headAngle / 180) + thicknes);
-                tr = Ogre::Vector3(0, itSail->headHeight + (itSail->headLength - itSail->headPosition) * sin(3.15 * itSail->headAngle / 180),
-                                      itMast->position + (itSail->headLength - itSail->headPosition) * cos(3.15 * itSail->headAngle / 180) + thicknes);
-            }
-            if(bl != br){
-                manual_planes->position(bl);
+            cout << " s\n";
+            if(itSail->bl != itSail->br){
+                if(itSail->footSpar == 1){
+                    drawSpar(manual_planes, posCount, itSail->bl, itSail->br);
+                }
+                manual_planes->position(itSail->bl);
                 manual_planes->colour(ColourValue(1, 1, 1));
                 manual_planes->normal(0,1,0);
 
-                manual_planes->position(br);
+                manual_planes->position(itSail->br);
                 manual_planes->colour(ColourValue(1, 1, 1));
                 manual_planes->normal(0,1,0);
 
-                manual_planes->position(tl);
+                manual_planes->position(itSail->tl);
                 manual_planes->colour(ColourValue(1, 1, 1));
                 manual_planes->normal(0,1,0);
 
@@ -500,16 +429,43 @@ void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
                 manual_planes->triangle(posCount -3, posCount -2, posCount -1);
                 manual_planes->triangle(posCount -3, posCount -1, posCount -2);
             }
-            if(tl != tr){
-                manual_planes->position(br);
+            if(itSail->tl != itSail->tr){
+                if(itSail->headSpar == 1){
+                    drawSpar(manual_planes, posCount, itSail->tl, itSail->tr);
+
+                    Ogre::Real sailSize = itSail->tl.distance(itSail->tr);
+                    sailSize += itSail->headHeight - itSail->footHeight;
+                    sailSize /= 2;
+
+                    manual_planes->position(itSail->tl);
+                    manual_planes->colour(ColourValue(0.8, 1, 1));
+                    manual_planes->normal(0,1,0);
+
+                    manual_planes->position(Ogre::Vector3(3* itSail->tl.x /4 + itSail->tr.x /4, 
+                                                          3* itSail->tl.y /4 + itSail->tr.y /4,
+                                                          3* itSail->tl.z /4 + itSail->tr.z /4));
+                    manual_planes->colour(ColourValue(0.8, 1, 1));
+                    manual_planes->normal(0,1,0);
+
+                    manual_planes->position(Ogre::Vector3(3* itSail->tl.x /4 + itSail->tr.x /4 - sailSize * itSail->aoa / 1000,
+                                                          3* itSail->tl.y /4 + itSail->tr.y /4 - sailSize /10,
+                                                          3* itSail->tl.z /4 + itSail->tr.z /4));
+                    manual_planes->colour(ColourValue(0.8, 1, 1));
+                    manual_planes->normal(0,1,0);
+
+                    posCount += 3;
+                    manual_planes->triangle(posCount -3, posCount -2, posCount -1);
+                    manual_planes->triangle(posCount -3, posCount -1, posCount -2);
+                }
+                manual_planes->position(itSail->br);
                 manual_planes->colour(ColourValue(1, 0.8, 1));
                 manual_planes->normal(0,1,0);
 
-                manual_planes->position(tl);
+                manual_planes->position(itSail->tl);
                 manual_planes->colour(ColourValue(1, 0.8, 1));
                 manual_planes->normal(0,1,0);
 
-                manual_planes->position(tr);
+                manual_planes->position(itSail->tr);
                 manual_planes->colour(ColourValue(1, 0.8, 1));
                 manual_planes->normal(0,1,0);
 
@@ -576,6 +532,8 @@ void GameState::drawBoat(void){
         cout << "drawBoat...\n";
         initialised = true;
 
+        m_pCamera->setPosition(boat.midPoint);
+
         initMaterial();
 
         //addLines("debug", &GameState::viewBox);
@@ -590,23 +548,6 @@ void GameState::drawBoat(void){
 
 bool GameState::keyPressed(const OIS::KeyEvent &keyEventRef)
 {
-    if(m_bSettingsMode == true)
-    {
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_S))
-        {
-            OgreBites::SelectMenu* pMenu = (OgreBites::SelectMenu*)OgreFramework::getSingletonPtr()->m_pTrayMgr->getWidget("DisplayModeSelMenu");
-            if(pMenu->getSelectionIndex() + 1 < (int)pMenu->getNumItems())
-                pMenu->selectItem(pMenu->getSelectionIndex() + 1);
-        }
-
-        if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_W))
-        {
-            OgreBites::SelectMenu* pMenu = (OgreBites::SelectMenu*)OgreFramework::getSingletonPtr()->m_pTrayMgr->getWidget("DisplayModeSelMenu");
-            if(pMenu->getSelectionIndex() - 1 >= 0)
-                pMenu->selectItem(pMenu->getSelectionIndex() - 1);
-        }
-    }
-
     if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_ESCAPE))
     {
         pushAppState(findByName("PauseState"));
@@ -817,26 +758,22 @@ void GameState::buildGUI()
     m_pDetailsPanel = OgreFramework::getSingletonPtr()->m_pTrayMgr->createParamsPanel(OgreBites::TL_TOPLEFT, "DetailsPanel", 200, items);
     m_pDetailsPanel->show();
 
-    Ogre::StringVector displayModes;
+    /*Ogre::StringVector displayModes;
     displayModes.push_back("Solid mode");
     displayModes.push_back("Wireframe mode");
     displayModes.push_back("Point mode");
-    OgreFramework::getSingletonPtr()->m_pTrayMgr->createLongSelectMenu(OgreBites::TL_TOPRIGHT, "DisplayModeSelMenu", "Display Mode", 200, 3, displayModes);
+    OgreFramework::getSingletonPtr()->m_pTrayMgr->createLongSelectMenu(OgreBites::TL_TOPRIGHT, "DisplayModeSelMenu", "Display Mode", 200, 3, displayModes);*/
+
+    OgreFramework::getSingletonPtr()->m_pTrayMgr->createThickSlider(OgreBites::TL_TOPRIGHT, "AoA", "AoA", 200, 80, -90, 90, 180);
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
-void GameState::itemSelected(OgreBites::SelectMenu* menu)
+void GameState::sliderMoved(OgreBites::Slider* slider)
 {
-    switch(menu->getSelectionIndex())
-    {
-        case 0:
-            m_pCamera->setPolygonMode(Ogre::PM_SOLID);break;
-        case 1:
-            m_pCamera->setPolygonMode(Ogre::PM_WIREFRAME);break;
-        case 2:
-            m_pCamera->setPolygonMode(Ogre::PM_POINTS);break;
-    }
+    cout << slider->getValue() << "\n";
+    boat.update(slider->getValue());
+    addPlanes("boatPlanes", &GameState::viewBoatPlanes);
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||

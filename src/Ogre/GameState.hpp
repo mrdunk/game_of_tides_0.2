@@ -7,6 +7,7 @@
 
 #include "AppState.hpp"
 #include "../data/data.h"
+#include "../data/boats.h"
 
 #include <OgreSubEntity.h>
 #include <OgreMaterialManager.h>
@@ -37,7 +38,7 @@ public:
 	bool mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
 	bool mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
 
-    void itemSelected(OgreBites::SelectMenu* menu);
+    void sliderMoved(OgreBites::Slider* slider);
 
 	void update(double timeSinceLastFrame);
 
@@ -49,6 +50,8 @@ public:
     Ogre::ManualObject* addPlanes(const Ogre::String name, void(GameState::*p_function)(Ogre::ManualObject*));
     void drawLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB);
     void drawBoat(void);
+
+    Vessel boat;
 
 private:
 	Ogre::SceneNode*			m_pOgreHeadNode;
