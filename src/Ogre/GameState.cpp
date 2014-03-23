@@ -408,7 +408,8 @@ void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
         Ogre::Vector3 tl, tr, bl, br;
         for(auto itSail = itMast->sails.begin(); itSail != itMast->sails.end(); ++itSail){
             cout << " s\n";
-            if(itSail->bl != itSail->br){
+            drawSail(manual_planes, posCount, *itSail);
+            /*if(itSail->bl != itSail->br){
                 if(itSail->footSpar == 1){
                     drawSpar(manual_planes, posCount, itSail->bl, itSail->br);
                 }
@@ -432,30 +433,6 @@ void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
             if(itSail->tl != itSail->tr){
                 if(itSail->headSpar == 1){
                     drawSpar(manual_planes, posCount, itSail->tl, itSail->tr);
-
-                    Ogre::Real sailSize = itSail->tl.distance(itSail->tr);
-                    sailSize += itSail->headHeight - itSail->footHeight;
-                    sailSize /= 2;
-
-                    manual_planes->position(itSail->tl);
-                    manual_planes->colour(ColourValue(0.8, 1, 1));
-                    manual_planes->normal(0,1,0);
-
-                    manual_planes->position(Ogre::Vector3(3* itSail->tl.x /4 + itSail->tr.x /4, 
-                                                          3* itSail->tl.y /4 + itSail->tr.y /4,
-                                                          3* itSail->tl.z /4 + itSail->tr.z /4));
-                    manual_planes->colour(ColourValue(0.8, 1, 1));
-                    manual_planes->normal(0,1,0);
-
-                    manual_planes->position(Ogre::Vector3(3* itSail->tl.x /4 + itSail->tr.x /4 - sailSize * itSail->aoa / 1000,
-                                                          3* itSail->tl.y /4 + itSail->tr.y /4 - sailSize /10,
-                                                          3* itSail->tl.z /4 + itSail->tr.z /4));
-                    manual_planes->colour(ColourValue(0.8, 1, 1));
-                    manual_planes->normal(0,1,0);
-
-                    posCount += 3;
-                    manual_planes->triangle(posCount -3, posCount -2, posCount -1);
-                    manual_planes->triangle(posCount -3, posCount -1, posCount -2);
                 }
                 manual_planes->position(itSail->br);
                 manual_planes->colour(ColourValue(1, 0.8, 1));
@@ -473,7 +450,7 @@ void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
 
                 manual_planes->triangle(posCount -3, posCount -2, posCount -1);
                 manual_planes->triangle(posCount -3, posCount -1, posCount -2);
-            }
+            }*/
         }
     }
 
@@ -771,7 +748,7 @@ void GameState::buildGUI()
 
 void GameState::sliderMoved(OgreBites::Slider* slider)
 {
-    cout << slider->getValue() << "\n";
+    //cout << slider->getValue() << "\n";
     boat.update(slider->getValue());
     addPlanes("boatPlanes", &GameState::viewBoatPlanes);
 }

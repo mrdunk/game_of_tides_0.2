@@ -32,7 +32,7 @@ struct Sail{
     int                                     reefPoints;     // 
     int                                     aoa;            // Anle of Atack.
 
-    Ogre::Vector3                           bl, br, tl, tr;
+    Ogre::Vector3                           bl, br, tl, tr, footRotatePos, headRotatePos;
     void                                    update(Mast &mast);
 };
 

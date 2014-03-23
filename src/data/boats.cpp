@@ -39,21 +39,21 @@ void Sail::update(Mast& mast){
         // TODO: type == SAIL_SQUARE 
     }
 
-    Ogre::Quaternion rotation(Ogre::Degree(aoa), Ogre::Vector3::UNIT_Y);
+    //Ogre::Quaternion rotation(Ogre::Degree(aoa), Ogre::Vector3::UNIT_Y);
 
-    Ogre::Vector3 rotatePos(0, 0, mast.position);
+    footRotatePos = Ogre::Vector3(0, 0, mast.position);
     if(footSpar == 0){
-        rotatePos = bl;     // rotate round tack rather than mast.
+        footRotatePos = bl;     // rotate round tack rather than mast.
     }
-    bl = (rotation * (bl - rotatePos)) + rotatePos;
-    br = (rotation * (br - rotatePos)) + rotatePos;
+    //bl = (rotation * (bl - rotatePos)) + rotatePos;
+    //br = (rotation * (br - rotatePos)) + rotatePos;
 
-    rotatePos = Ogre::Vector3(0, 0, mast.position);
+    headRotatePos = Ogre::Vector3(0, 0, mast.position);
     if(headSpar == 0){
-        rotatePos = tl;
+        headRotatePos = tl;
     }
-    tl = (rotation * (tl - rotatePos)) + rotatePos;
-    tr = (rotation * (tr - rotatePos)) + rotatePos;
+    //tl = (rotation * (tl - rotatePos)) + rotatePos;
+    //tr = (rotation * (tr - rotatePos)) + rotatePos;
 }
 
 Vessel testBoat(void){
@@ -175,7 +175,7 @@ Vessel testBoat(void){
     sail2.headPosition = 1;
     sail2.footAngle = 0;
     sail2.headAngle = 40;
-    sail2.footSpar = 0;
+    sail2.footSpar = 1;
     sail2.headSpar = 1;
 
     m2.sails.push_back(sail2);
