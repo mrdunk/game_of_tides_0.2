@@ -98,6 +98,26 @@ list_install_components:
 list_install_components/fast: list_install_components
 .PHONY : list_install_components/fast
 
+# Special rule for the target package
+package: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool..."
+	/usr/bin/cpack --config ./CPackConfig.cmake
+.PHONY : package
+
+# Special rule for the target package
+package/fast: package
+.PHONY : package/fast
+
+# Special rule for the target package_source
+package_source:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool for source..."
+	/usr/bin/cpack --config ./CPackSourceConfig.cmake /home/duncan/Working/git/game-of-tides_0.2/CPackSourceConfig.cmake
+.PHONY : package_source
+
+# Special rule for the target package_source
+package_source/fast: package_source
+.PHONY : package_source/fast
+
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
@@ -248,6 +268,30 @@ src/Ogre/DemoApp.cpp.s:
 	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/DemoApp.cpp.s
 .PHONY : src/Ogre/DemoApp.cpp.s
 
+src/Ogre/DrawThings.o: src/Ogre/DrawThings.cpp.o
+.PHONY : src/Ogre/DrawThings.o
+
+# target to build an object file
+src/Ogre/DrawThings.cpp.o:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/DrawThings.cpp.o
+.PHONY : src/Ogre/DrawThings.cpp.o
+
+src/Ogre/DrawThings.i: src/Ogre/DrawThings.cpp.i
+.PHONY : src/Ogre/DrawThings.i
+
+# target to preprocess a source file
+src/Ogre/DrawThings.cpp.i:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/DrawThings.cpp.i
+.PHONY : src/Ogre/DrawThings.cpp.i
+
+src/Ogre/DrawThings.s: src/Ogre/DrawThings.cpp.s
+.PHONY : src/Ogre/DrawThings.s
+
+# target to generate assembly for a file
+src/Ogre/DrawThings.cpp.s:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/DrawThings.cpp.s
+.PHONY : src/Ogre/DrawThings.cpp.s
+
 src/Ogre/GameState.o: src/Ogre/GameState.cpp.o
 .PHONY : src/Ogre/GameState.o
 
@@ -344,53 +388,29 @@ src/Ogre/main.cpp.s:
 	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Ogre/main.cpp.s
 .PHONY : src/Ogre/main.cpp.s
 
-src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.o: src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.o
-.PHONY : src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.o
+src/data/boats.o: src/data/boats.cpp.o
+.PHONY : src/data/boats.o
 
 # target to build an object file
-src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.o:
-	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.o
-.PHONY : src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.o
+src/data/boats.cpp.o:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/data/boats.cpp.o
+.PHONY : src/data/boats.cpp.o
 
-src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.i: src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.i
-.PHONY : src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.i
-
-# target to preprocess a source file
-src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.i:
-	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.i
-.PHONY : src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.i
-
-src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.s: src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.s
-.PHONY : src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.s
-
-# target to generate assembly for a file
-src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.s:
-	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.s
-.PHONY : src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.cpp.s
-
-src/Voronoi/voronoi.o: src/Voronoi/voronoi.cpp.o
-.PHONY : src/Voronoi/voronoi.o
-
-# target to build an object file
-src/Voronoi/voronoi.cpp.o:
-	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Voronoi/voronoi.cpp.o
-.PHONY : src/Voronoi/voronoi.cpp.o
-
-src/Voronoi/voronoi.i: src/Voronoi/voronoi.cpp.i
-.PHONY : src/Voronoi/voronoi.i
+src/data/boats.i: src/data/boats.cpp.i
+.PHONY : src/data/boats.i
 
 # target to preprocess a source file
-src/Voronoi/voronoi.cpp.i:
-	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Voronoi/voronoi.cpp.i
-.PHONY : src/Voronoi/voronoi.cpp.i
+src/data/boats.cpp.i:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/data/boats.cpp.i
+.PHONY : src/data/boats.cpp.i
 
-src/Voronoi/voronoi.s: src/Voronoi/voronoi.cpp.s
-.PHONY : src/Voronoi/voronoi.s
+src/data/boats.s: src/data/boats.cpp.s
+.PHONY : src/data/boats.s
 
 # target to generate assembly for a file
-src/Voronoi/voronoi.cpp.s:
-	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/Voronoi/voronoi.cpp.s
-.PHONY : src/Voronoi/voronoi.cpp.s
+src/data/boats.cpp.s:
+	$(MAKE) -f CMakeFiles/OgreApp.dir/build.make CMakeFiles/OgreApp.dir/src/data/boats.cpp.s
+.PHONY : src/data/boats.cpp.s
 
 src/data/data.o: src/data/data.cpp.o
 .PHONY : src/data/data.o
@@ -428,6 +448,8 @@ help:
 	@echo "... install/local"
 	@echo "... install/strip"
 	@echo "... list_install_components"
+	@echo "... package"
+	@echo "... package_source"
 	@echo "... rebuild_cache"
 	@echo "... src/Ogre/AdvancedOgreFramework.o"
 	@echo "... src/Ogre/AdvancedOgreFramework.i"
@@ -441,6 +463,9 @@ help:
 	@echo "... src/Ogre/DemoApp.o"
 	@echo "... src/Ogre/DemoApp.i"
 	@echo "... src/Ogre/DemoApp.s"
+	@echo "... src/Ogre/DrawThings.o"
+	@echo "... src/Ogre/DrawThings.i"
+	@echo "... src/Ogre/DrawThings.s"
 	@echo "... src/Ogre/GameState.o"
 	@echo "... src/Ogre/GameState.i"
 	@echo "... src/Ogre/GameState.s"
@@ -453,12 +478,9 @@ help:
 	@echo "... src/Ogre/main.o"
 	@echo "... src/Ogre/main.i"
 	@echo "... src/Ogre/main.s"
-	@echo "... src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.o"
-	@echo "... src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.i"
-	@echo "... src/Voronoi/MapManagerLibrary/voronoi/VoronoiDiagramGenerator.s"
-	@echo "... src/Voronoi/voronoi.o"
-	@echo "... src/Voronoi/voronoi.i"
-	@echo "... src/Voronoi/voronoi.s"
+	@echo "... src/data/boats.o"
+	@echo "... src/data/boats.i"
+	@echo "... src/data/boats.s"
 	@echo "... src/data/data.o"
 	@echo "... src/data/data.i"
 	@echo "... src/data/data.s"

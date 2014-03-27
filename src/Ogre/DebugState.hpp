@@ -10,6 +10,7 @@
 
 #include <OgreSubEntity.h>
 #include <OgreMaterialManager.h>
+#include "DrawThings.hpp"
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -46,6 +47,8 @@ class DebugState : public AppState{
    
     void addPlanes(const Ogre::String name, const int recursion){ addPlanes(name, recursion, Point(0, 0), Point(MAP_SIZE * MAP_MIN_RES, MAP_SIZE * MAP_MIN_RES)); };
     void addPlanes(const Ogre::String name, const int recursion, Point bl, Point tr);
+    Ogre::ManualObject* addPlanes(const Ogre::String name, void(DebugState::*p_function)(Ogre::ManualObject*));
+
 
     Ogre::ManualObject* addLines(const Ogre::String name, void(DebugState::*p_function)(Ogre::ManualObject*));
     void viewBox(Ogre::ManualObject* manual_lines);
@@ -61,6 +64,11 @@ class DebugState : public AppState{
     void generateScenery();
     int zoom;
     int debugRecursion;
+
+    std::vector<struct Vessel> boats;
+
+    void displayBoats();
+    void viewBoatPlanes(Ogre::ManualObject* manual_planes);
 
   private:
 	Ogre::SceneNode*			m_pOgreHeadNode;

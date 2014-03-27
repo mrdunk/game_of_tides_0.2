@@ -8,8 +8,8 @@
 #include "GameState.hpp"
 #include <utility>      // std::pair, std::make_pair
 #include "../data/boats.h"
-#include "../data/boats.cpp"
-#include "DrawThings.cpp"
+//#include "../data/boats.cpp"
+//#include "DrawThings.cpp"
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -39,13 +39,13 @@ void GameState::enter()
 
     m_pSceneMgr = OgreFramework::getSingletonPtr()->m_pRoot->createSceneManager(ST_GENERIC, "GameSceneMgr");
 
-    m_pSceneMgr->setAmbientLight(Ogre::ColourValue(0.3f, 0.3f, 0.3f));
+    m_pSceneMgr->setAmbientLight(Ogre::ColourValue(0.4f, 0.4f, 0.4f));
 
     Ogre::Light* directionalLight = m_pSceneMgr->createLight("Light");
     directionalLight->setType(Ogre::Light::LT_DIRECTIONAL);
-    directionalLight->setDiffuseColour(Ogre::ColourValue(.3, .3, .3));
+    directionalLight->setDiffuseColour(Ogre::ColourValue(.4, .4, .4));
     //directionalLight->setDiffuseColour(Ogre::ColourValue(1,1,1));
-    directionalLight->setSpecularColour(Ogre::ColourValue(.3, .3, .3));
+    directionalLight->setSpecularColour(Ogre::ColourValue(.5, .5, .5));
     directionalLight->setDirection(Ogre::Vector3(0, -1, 0));
 
     // This light source is to give some texture to underside of objects.
@@ -205,254 +205,8 @@ void GameState::viewBoatLines(Ogre::ManualObject* manual_lines){
 void GameState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
     cout << boat.description << "\n";
 
-    int posCount = 0;
-    HullSection* lastSection = &(boat.sections.back());
-    Ogre::Vector3 c1, c2, c3, c4, dir0, dir1, normalInsideStarboard, normalOutsideStarboard, normalInsidePort, normalOutsidePort, normal;
-    for(auto itSection = boat.sections.begin(); itSection != boat.sections.end(); ++itSection){
-            std::pair<float,float>* previousPanelFore = &(*(lastSection->widthHeight.begin()));
-            std::pair<float,float>* previousPanelAft = &(*(itSection->widthHeight.begin()));
-            auto itPanelFore = lastSection->widthHeight.begin();
-            auto itPanelAft = itSection->widthHeight.begin();
-            while(itPanelAft != itSection->widthHeight.end()){
-                if(itSection != boat.sections.begin() and itPanelFore == lastSection->widthHeight.begin()){
-                    // deck
-                    c1 = Ogre::Vector3(itPanelAft->second, itPanelAft->first, itSection->position);
-                    c2 = Ogre::Vector3(-itPanelAft->second, itPanelAft->first, itSection->position);
-                    c3 = Ogre::Vector3(itPanelFore->second, itPanelFore->first, lastSection->position);
-                    c4 = Ogre::Vector3(-itPanelFore->second, itPanelFore->first, lastSection->position);
-                    if(c1 != c2 and c1 != c4){
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c4;
-                    } else {
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c3;
-                    }
-                    normal = dir1.crossProduct(dir0).normalisedCopy();
-
-                    manual_planes->position(c1);
-                    manual_planes->colour(ColourValue(0.6 + 0.2 * itPanelAft->first, 0.4, 0.1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c2);
-                    manual_planes->colour(ColourValue(0.6 + 0.2 * itPanelAft->first, 0.4, 0.1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c3);
-                    manual_planes->colour(ColourValue(0.6 + 0.2 * itPanelAft->first, 0.4, 0.1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c4);
-                    manual_planes->colour(ColourValue(0.6 + 0.2 * itPanelAft->first, 0.4, 0.1));
-                    manual_planes->normal(normal);
-
-                    posCount += 4;
-                    
-                    manual_planes->triangle(posCount -4, posCount -2, posCount -3);
-                    manual_planes->triangle(posCount -3, posCount -2, posCount -1);
-                }
-                if((itSection == boat.sections.begin() or &(*itSection) == &(boat.sections.back())) and previousPanelAft->second != 0 and itPanelAft->second != 0){
-                    // bow and stern bulkhead.
-                    c1 = Ogre::Vector3(previousPanelAft->second, previousPanelAft->first, itSection->position);
-                    c2 = Ogre::Vector3(-previousPanelAft->second, previousPanelAft->first, itSection->position);
-                    c3 = Ogre::Vector3(itPanelAft->second, itPanelAft->first, itSection->position);
-                    c4 = Ogre::Vector3(-itPanelAft->second, itPanelAft->first, itSection->position);
-                    if(c1 != c2 and c1 != c4){
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c4;
-                    } else {
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c3;
-                    }
-                    normal = dir1.crossProduct(dir0).normalisedCopy();
-
-                    manual_planes->position(c1);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c2);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c3);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c4);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-
-                    posCount += 4;
-
-                    if(itSection == boat.sections.begin()){
-                        // bow
-                        manual_planes->triangle(posCount -4, posCount -2, posCount -3);
-                        manual_planes->triangle(posCount -3, posCount -2, posCount -1);
-                    } else {
-                        // stern
-                        manual_planes->triangle(posCount -4, posCount -3, posCount -2);
-                        manual_planes->triangle(posCount -3, posCount -1, posCount -2);
-                    }
-                }
-                if((itSection->position - lastSection->position == 0 and itPanelFore->first != itPanelAft->first)){
-                    // Bulkheads.
-                    c1 = Ogre::Vector3(itPanelFore->second, itPanelFore->first, lastSection->position);
-                    c2 = Ogre::Vector3(itPanelAft->second, itPanelAft->first, itSection->position);
-                    c3 = Ogre::Vector3(-itPanelFore->second, itPanelFore->first, lastSection->position);;
-                    c4 = Ogre::Vector3(-itPanelAft->second, itPanelAft->first, itSection->position);
-                    if(c1 != c2 and c1 != c4){
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c4;
-                    } else {
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c3;
-                    }
-                    normal = dir1.crossProduct(dir0).normalisedCopy();
-
-                    manual_planes->position(c1);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c2);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c3);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-                    manual_planes->position(c4);
-                    manual_planes->colour(ColourValue(0.5, 1, 1));
-                    manual_planes->normal(normal);
-
-                    posCount += 4;
-
-                    manual_planes->triangle(posCount -4, posCount -2, posCount -3);
-                    manual_planes->triangle(posCount -3, posCount -2, posCount -1);
-                }
-                if(itSection != boat.sections.begin() and itPanelFore != lastSection->widthHeight.begin() and itSection->position - lastSection->position != 0){
-                    // Sides of boat
-                    c1 = Ogre::Vector3(previousPanelFore->second, previousPanelFore->first, lastSection->position);
-                    c2 = Ogre::Vector3(previousPanelAft->second, previousPanelAft->first, itSection->position);
-                    c3 = Ogre::Vector3(itPanelFore->second, itPanelFore->first, lastSection->position);
-                    c4 = Ogre::Vector3(itPanelAft->second, itPanelAft->first, itSection->position);
-                    if(c1 != c2 and c1 != c4){
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c4;
-                    } else {
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c3;
-                    }
-                    normalOutsideStarboard = dir0.crossProduct(dir1).normalisedCopy();
-
-                    // Outside starboard hull.
-                    manual_planes->position(Ogre::Vector3(c1));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));
-                    manual_planes->normal(normalOutsideStarboard);
-
-                    manual_planes->position(Ogre::Vector3(c3));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));
-                    manual_planes->normal(normalOutsideStarboard);
-
-                    manual_planes->position(Ogre::Vector3(c2));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));
-                    manual_planes->normal(normalOutsideStarboard);
-
-                    manual_planes->position(Ogre::Vector3(c4));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));
-                    manual_planes->normal(normalOutsideStarboard);
-
-
-                    c1 = Ogre::Vector3(-previousPanelFore->second, previousPanelFore->first, lastSection->position);
-                    c2 = Ogre::Vector3(-previousPanelAft->second, previousPanelAft->first, itSection->position);
-                    c3 = Ogre::Vector3(-itPanelFore->second, itPanelFore->first, lastSection->position);
-                    c4 = Ogre::Vector3(-itPanelAft->second, itPanelAft->first, itSection->position);
-                    if(c1 != c2 and c1 != c4){
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c4;
-                    } else {
-                        dir0 = c1 - c2;
-                        dir1 = c1 - c3;
-                    }
-                    normalOutsidePort = dir1.crossProduct(dir0).normalisedCopy();
-
-                    // Outside port hull.
-                    manual_planes->position(Ogre::Vector3(c1));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));
-                    manual_planes->normal(normalOutsidePort);                           
-
-                    manual_planes->position(Ogre::Vector3(c3));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));
-                    manual_planes->normal(normalOutsidePort);                                                                   
-
-                    manual_planes->position(Ogre::Vector3(c2));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));                                                                                            
-                    manual_planes->normal(normalOutsidePort);
-
-                    manual_planes->position(Ogre::Vector3(c4));
-                    manual_planes->colour(ColourValue(0.5, 0.5, 1));
-                    manual_planes->normal(normalOutsidePort);
-
-                    posCount += 8;
-
-                    manual_planes->triangle(posCount -8, posCount -6, posCount -7);
-                    manual_planes->triangle(posCount -5, posCount -7, posCount -6);
-
-                    manual_planes->triangle(posCount -4, posCount -3, posCount -2);
-                    manual_planes->triangle(posCount -1, posCount -2, posCount -3);
-                }
-
-                previousPanelFore = &(*itPanelFore);
-                previousPanelAft = &(*itPanelAft);
-                ++itPanelFore; ++itPanelAft;
-            }
-
-        lastSection = &(*itSection);
-    }
-
-    Ogre::Vector3 c5, c6, c7, c8;
-    for(auto itMast = boat.masts.begin(); itMast != boat.masts.end(); ++itMast){
-        cout << "m\n";
-        drawSpar(manual_planes, posCount, Ogre::Vector3(0.0, 0.0, itMast->position), Ogre::Vector3(0.0, itMast->height, itMast->position));
-
-        Ogre::Vector3 tl, tr, bl, br;
-        for(auto itSail = itMast->sails.begin(); itSail != itMast->sails.end(); ++itSail){
-            cout << " s\n";
-            drawSail(manual_planes, posCount, *itSail);
-            /*if(itSail->bl != itSail->br){
-                if(itSail->footSpar == 1){
-                    drawSpar(manual_planes, posCount, itSail->bl, itSail->br);
-                }
-                manual_planes->position(itSail->bl);
-                manual_planes->colour(ColourValue(1, 1, 1));
-                manual_planes->normal(0,1,0);
-
-                manual_planes->position(itSail->br);
-                manual_planes->colour(ColourValue(1, 1, 1));
-                manual_planes->normal(0,1,0);
-
-                manual_planes->position(itSail->tl);
-                manual_planes->colour(ColourValue(1, 1, 1));
-                manual_planes->normal(0,1,0);
-
-                posCount += 3;
-
-                manual_planes->triangle(posCount -3, posCount -2, posCount -1);
-                manual_planes->triangle(posCount -3, posCount -1, posCount -2);
-            }
-            if(itSail->tl != itSail->tr){
-                if(itSail->headSpar == 1){
-                    drawSpar(manual_planes, posCount, itSail->tl, itSail->tr);
-                }
-                manual_planes->position(itSail->br);
-                manual_planes->colour(ColourValue(1, 0.8, 1));
-                manual_planes->normal(0,1,0);
-
-                manual_planes->position(itSail->tl);
-                manual_planes->colour(ColourValue(1, 0.8, 1));
-                manual_planes->normal(0,1,0);
-
-                manual_planes->position(itSail->tr);
-                manual_planes->colour(ColourValue(1, 0.8, 1));
-                manual_planes->normal(0,1,0);
-
-                posCount += 3;
-
-                manual_planes->triangle(posCount -3, posCount -2, posCount -1);
-                manual_planes->triangle(posCount -3, posCount -1, posCount -2);
-            }*/
-        }
-    }
+    int posCount = manual_planes->getCurrentVertexCount();
+    drawHull(manual_planes, posCount, boat);
 
 }
 
@@ -483,12 +237,13 @@ ManualObject* GameState::addPlanes(const String name, void(GameState::*p_functio
     ManualObject* manual_planes;
     try{
         manual_planes = m_pSceneMgr->getManualObject(name);
-        SceneNode* parent = manual_planes->getParentSceneNode();
-        parent->detachObject(manual_planes);
-        m_pSceneMgr->destroySceneNode(parent->getName());
+        //SceneNode* parent = manual_planes->getParentSceneNode();
+        //parent->detachObject(manual_planes);
+        //m_pSceneMgr->destroySceneNode(parent->getName());
         manual_planes->clear();
     } catch (Ogre::Exception ex) {
         manual_planes = m_pSceneMgr->createManualObject(name);
+        m_pSceneMgr->getRootSceneNode()->createChildSceneNode("boatNode")->attachObject(manual_planes);
     }
 
     manual_planes->begin("SolidColour", Ogre::RenderOperation::OT_TRIANGLE_LIST);
@@ -496,8 +251,6 @@ ManualObject* GameState::addPlanes(const String name, void(GameState::*p_functio
     (this->*p_function)(manual_planes);
 
     manual_planes->end();
-
-    m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual_planes);
 
     return manual_planes;
 }
@@ -735,21 +488,26 @@ void GameState::buildGUI()
     m_pDetailsPanel = OgreFramework::getSingletonPtr()->m_pTrayMgr->createParamsPanel(OgreBites::TL_TOPLEFT, "DetailsPanel", 200, items);
     m_pDetailsPanel->show();
 
-    /*Ogre::StringVector displayModes;
-    displayModes.push_back("Solid mode");
-    displayModes.push_back("Wireframe mode");
-    displayModes.push_back("Point mode");
-    OgreFramework::getSingletonPtr()->m_pTrayMgr->createLongSelectMenu(OgreBites::TL_TOPRIGHT, "DisplayModeSelMenu", "Display Mode", 200, 3, displayModes);*/
-
-    OgreFramework::getSingletonPtr()->m_pTrayMgr->createThickSlider(OgreBites::TL_TOPRIGHT, "AoA", "AoA", 200, 80, -90, 90, 180);
+    OgreFramework::getSingletonPtr()->m_pTrayMgr->createThickSlider(OgreBites::TL_TOPRIGHT, "SailAngle", "SailAngle", 200, 80, -90, 90, 181);
+    OgreFramework::getSingletonPtr()->m_pTrayMgr->createThickSlider(OgreBites::TL_TOPRIGHT, "WindDir", "WindDir", 200, 80, 0, 359, 360);
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
 void GameState::sliderMoved(OgreBites::Slider* slider)
 {
-    //cout << slider->getValue() << "\n";
-    boat.update(slider->getValue());
+    static int SailAngle = -90;
+    static int WindDir = 0;
+
+    if(slider->getName() == "SailAngle"){
+        SailAngle = slider->getValue();
+    }
+    else if(slider->getName() == "WindDir"){
+        WindDir = slider->getValue();
+        if(WindDir >= 180) WindDir -= 360;
+    }
+
+    boat.update(WindDir, 0, 0, SailAngle);
     addPlanes("boatPlanes", &GameState::viewBoatPlanes);
 }
 

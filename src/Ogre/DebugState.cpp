@@ -7,6 +7,8 @@
 
 #include "DebugState.hpp"
 #include <utility>      // std::pair, std::make_pair
+#include "../data/boats.h"
+#include "DrawThings.hpp"
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -65,6 +67,8 @@ void DebugState::enter()
     m_pCurrentObject = 0;
 
     buildGUI();
+
+    boats.push_back(testBoat());
 
     createScene();
 }
@@ -194,6 +198,28 @@ ManualObject* DebugState::addLines(const String name, void(DebugState::*p_functi
     m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual_lines);
 
     return manual_lines;
+}
+
+ManualObject* DebugState::addPlanes(const String name, void(DebugState::*p_function)(ManualObject*)){
+    ManualObject* manual_planes;
+    try{
+        manual_planes = m_pSceneMgr->getManualObject(name);
+        //SceneNode* parent = manual_planes->getParentSceneNode();
+        //parent->detachObject(manual_planes);
+        //m_pSceneMgr->destroySceneNode(parent->getName());
+        manual_planes->clear();
+    } catch (Ogre::Exception ex) {
+        manual_planes = m_pSceneMgr->createManualObject(name);
+        m_pSceneMgr->getRootSceneNode()->createChildSceneNode("boatNode")->attachObject(manual_planes);
+    }
+
+    manual_planes->begin("SolidColour", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+
+    (this->*p_function)(manual_planes);
+
+    manual_planes->end();
+
+    return manual_planes;
 }
 
 void DebugState::addPlanes(const String name, const int recursion, Point bl, Point tr){
@@ -523,6 +549,20 @@ void DebugState::getInput()
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
+void DebugState::displayBoats(){
+    addPlanes("boatPlanes", &DebugState::viewBoatPlanes);
+}
+
+void DebugState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
+
+    int posCount = manual_planes->getCurrentVertexCount();
+
+    for(auto it = boats.begin(); it != boats.end(); ++it){
+        drawHull(manual_planes, posCount, *it);
+    }
+
+}
+
 void DebugState::update(double timeSinceLastFrame)
 {
     m_FrameEvent.timeSinceLastFrame = timeSinceLastFrame;
@@ -559,6 +599,7 @@ void DebugState::update(double timeSinceLastFrame)
 
     getInput();
     generateScenery();
+    displayBoats();
     moveCamera();
 }
 

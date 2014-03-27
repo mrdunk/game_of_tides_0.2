@@ -3,10 +3,13 @@
 #include "boats.h"
 
 void Vessel::update(void){
-    Vessel::update(50);
+    Vessel::update(0, 0, 0, -90);
 }
 
-void Vessel::update(int aoa){
+void Vessel::update(int windDir, float speed, int heading, int sailAngle){
+    relWindDir = windDir;  // TODO
+    std::cout << "relWindDir: " << relWindDir << "\n";
+
     float lowLen = 9999999, highLen = -9999999;
     for(auto itSection = sections.begin(); itSection != sections.end(); ++itSection){
         if(itSection->position > highLen) highLen = itSection->position;
@@ -17,7 +20,7 @@ void Vessel::update(int aoa){
 
     for(auto itMasts = masts.begin(); itMasts != masts.end(); ++itMasts){
         for(auto itSails = itMasts->sails.begin(); itSails != itMasts->sails.end(); ++itSails){
-            itSails->aoa = aoa;
+            itSails->sailAngle = sailAngle;
             itSails->update(*itMasts);
         }
     }
@@ -39,7 +42,7 @@ void Sail::update(Mast& mast){
         // TODO: type == SAIL_SQUARE 
     }
 
-    //Ogre::Quaternion rotation(Ogre::Degree(aoa), Ogre::Vector3::UNIT_Y);
+    //Ogre::Quaternion rotation(Ogre::Degree(sailAngle), Ogre::Vector3::UNIT_Y);
 
     footRotatePos = Ogre::Vector3(0, 0, mast.position);
     if(footSpar == 0){
@@ -63,60 +66,60 @@ Vessel testBoat(void){
     HullSection s1, s2, s3, s4, s5, s6, s7, s8;
 
     s1.position = 0;
-    s1.widthHeight.push_back(make_pair(1.0, 0));
-    s1.widthHeight.push_back(make_pair(0.4, 0));
-    s1.widthHeight.push_back(make_pair(0.0, 0));
-    s1.widthHeight.push_back(make_pair(-0.3, 0));
-    s1.widthHeight.push_back(make_pair(-0.4, 0));
+    s1.widthHeight.push_back(std::make_pair(1.0, 0));
+    s1.widthHeight.push_back(std::make_pair(0.4, 0));
+    s1.widthHeight.push_back(std::make_pair(0.0, 0));
+    s1.widthHeight.push_back(std::make_pair(-0.3, 0));
+    s1.widthHeight.push_back(std::make_pair(-0.4, 0));
 
     s2.position = 1.5;
-    s2.widthHeight.push_back(make_pair(1.0, 0.8));
-    s2.widthHeight.push_back(make_pair(0.0, 1.1));
-    s2.widthHeight.push_back(make_pair(-0.8, 0.8));
-    s2.widthHeight.push_back(make_pair(-1.3, 0.1));
-    s2.widthHeight.push_back(make_pair(-1.6, 0.0));
+    s2.widthHeight.push_back(std::make_pair(1.0, 0.8));
+    s2.widthHeight.push_back(std::make_pair(0.0, 1.1));
+    s2.widthHeight.push_back(std::make_pair(-0.8, 0.8));
+    s2.widthHeight.push_back(std::make_pair(-1.3, 0.1));
+    s2.widthHeight.push_back(std::make_pair(-1.6, 0.0));
 
     s3.position = 3.5;
-    s3.widthHeight.push_back(make_pair(1.0, 1.2));
-    s3.widthHeight.push_back(make_pair(0.0, 1.6));
-    s3.widthHeight.push_back(make_pair(-1.2, 1.1));
-    s3.widthHeight.push_back(make_pair(-1.7, 0.1));
-    s3.widthHeight.push_back(make_pair(-2.0, 0.0));
+    s3.widthHeight.push_back(std::make_pair(1.0, 1.2));
+    s3.widthHeight.push_back(std::make_pair(0.0, 1.6));
+    s3.widthHeight.push_back(std::make_pair(-1.2, 1.1));
+    s3.widthHeight.push_back(std::make_pair(-1.7, 0.1));
+    s3.widthHeight.push_back(std::make_pair(-2.0, 0.0));
 
     s4.position = 3.5;
-    s4.widthHeight.push_back(make_pair(0.5, 1.4));
-    s4.widthHeight.push_back(make_pair(0.0, 1.6));
-    s4.widthHeight.push_back(make_pair(-1.2, 1.1));
-    s4.widthHeight.push_back(make_pair(-1.7, 0.1));
-    s4.widthHeight.push_back(make_pair(-2.0, 0.0));
+    s4.widthHeight.push_back(std::make_pair(0.5, 1.4));
+    s4.widthHeight.push_back(std::make_pair(0.0, 1.6));
+    s4.widthHeight.push_back(std::make_pair(-1.2, 1.1));
+    s4.widthHeight.push_back(std::make_pair(-1.7, 0.1));
+    s4.widthHeight.push_back(std::make_pair(-2.0, 0.0));
 
     s5.position = 7.5;
-    s5.widthHeight.push_back(make_pair(0.5, 1.4));
-    s5.widthHeight.push_back(make_pair(0.0, 1.6));
-    s5.widthHeight.push_back(make_pair(-1.2, 1.1));
-    s5.widthHeight.push_back(make_pair(-1.7, 0.1));
-    s5.widthHeight.push_back(make_pair(-2.0, 0.0));
+    s5.widthHeight.push_back(std::make_pair(0.5, 1.4));
+    s5.widthHeight.push_back(std::make_pair(0.0, 1.6));
+    s5.widthHeight.push_back(std::make_pair(-1.2, 1.1));
+    s5.widthHeight.push_back(std::make_pair(-1.7, 0.1));
+    s5.widthHeight.push_back(std::make_pair(-2.0, 0.0));
 
     s6.position = 7.5;
-    s6.widthHeight.push_back(make_pair(1.0, 1.2));
-    s6.widthHeight.push_back(make_pair(0.0, 1.6));
-    s6.widthHeight.push_back(make_pair(-1.2, 1.1));
-    s6.widthHeight.push_back(make_pair(-1.7, 0.1));
-    s6.widthHeight.push_back(make_pair(-2.0, 0.0));
+    s6.widthHeight.push_back(std::make_pair(1.0, 1.2));
+    s6.widthHeight.push_back(std::make_pair(0.0, 1.6));
+    s6.widthHeight.push_back(std::make_pair(-1.2, 1.1));
+    s6.widthHeight.push_back(std::make_pair(-1.7, 0.1));
+    s6.widthHeight.push_back(std::make_pair(-2.0, 0.0));
 
     s7.position = 9;
-    s7.widthHeight.push_back(make_pair(1.0, 1.0));
-    s7.widthHeight.push_back(make_pair(0.0, 1.3));
-    s7.widthHeight.push_back(make_pair(-1.0, 0.8));
-    s7.widthHeight.push_back(make_pair(-1.6, 0.1));
-    s7.widthHeight.push_back(make_pair(-2.0, 0.0));
+    s7.widthHeight.push_back(std::make_pair(1.0, 1.0));
+    s7.widthHeight.push_back(std::make_pair(0.0, 1.3));
+    s7.widthHeight.push_back(std::make_pair(-1.0, 0.8));
+    s7.widthHeight.push_back(std::make_pair(-1.6, 0.1));
+    s7.widthHeight.push_back(std::make_pair(-2.0, 0.0));
 
     s8.position = 10;
-    s8.widthHeight.push_back(make_pair(1.0, 0.7));
-    s8.widthHeight.push_back(make_pair(0.0, 0.9));
-    s8.widthHeight.push_back(make_pair(0.0, 0.6));
-    s8.widthHeight.push_back(make_pair(0.0, 0.1));
-    s8.widthHeight.push_back(make_pair(0.0, 0.0));
+    s8.widthHeight.push_back(std::make_pair(1.0, 0.7));
+    s8.widthHeight.push_back(std::make_pair(0.0, 0.9));
+    s8.widthHeight.push_back(std::make_pair(0.0, 0.6));
+    s8.widthHeight.push_back(std::make_pair(0.0, 0.1));
+    s8.widthHeight.push_back(std::make_pair(0.0, 0.0));
 
     returnBoat.sections.push_back(s1);
     returnBoat.sections.push_back(s2);
@@ -175,7 +178,7 @@ Vessel testBoat(void){
     sail2.headPosition = 1;
     sail2.footAngle = 0;
     sail2.headAngle = 40;
-    sail2.footSpar = 1;
+    sail2.footSpar = 0;
     sail2.headSpar = 1;
 
     m2.sails.push_back(sail2);

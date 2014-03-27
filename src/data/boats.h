@@ -5,6 +5,10 @@
 #define SAIL_SQUARE     2
 #define SAIL_FORE       3
 
+#include <vector>
+#include <string>
+#include <OgreVector3.h>
+#include <iostream>
 
 struct HullSection{
     float                                   position;
@@ -30,7 +34,7 @@ struct Sail{
     int                                     footSpar;       // Does the sail have a boom? True or false.
     int                                     headSpar;       // Does the sail have a gaff? True or false.
     int                                     reefPoints;     // 
-    int                                     aoa;            // Anle of Atack.
+    int                                     sailAngle;      // Angle af sail relative to boat.
 
     Ogre::Vector3                           bl, br, tl, tr, footRotatePos, headRotatePos;
     void                                    update(Mast &mast);
@@ -39,15 +43,20 @@ struct Sail{
 struct Vessel{
     std::string                         description;
 
+    int                                 windDir;
+    int                                 relWindDir;
+    float                               speed;
+    int                                 heading;
+
     std::vector<struct HullSection>     sections;
     std::vector<struct Mast>            masts;
 
     Ogre::Vector3                       midPoint;
     void                                update(void);
-    void                                update(int aoa);    // Update all sails on boat to new AoA.
+    void                                update(int windDir, float speed, int heading, int sailAngle);    // Update all sails on boat to new AoA.
 };
 
-
+Vessel testBoat(void);
 
 
 

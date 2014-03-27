@@ -105,6 +105,7 @@ set(HDRS
     ./src/Ogre/MenuState.hpp
     ./src/Ogre/PauseState.hpp
     ./src/data/data.h
+    ./src/data/boats.h
 )
  
 set(SRCS
@@ -117,6 +118,8 @@ set(SRCS
     ./src/Ogre/PauseState.cpp
     ./src/Ogre/AdvancedOgreFramework.cpp
     ./src/data/data.cpp
+    ./src/data/boats.cpp
+    ./src/Ogre/DrawThings.cpp
 )
  
 include_directories( ${OIS_INCLUDE_DIRS}

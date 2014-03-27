@@ -8,6 +8,7 @@
 #include "AppState.hpp"
 #include "../data/data.h"
 #include "../data/boats.h"
+#include "DrawThings.hpp"
 
 #include <OgreSubEntity.h>
 #include <OgreMaterialManager.h>
