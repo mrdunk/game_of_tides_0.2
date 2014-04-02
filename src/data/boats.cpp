@@ -4,11 +4,19 @@
 
 void Vessel::update(void){
     Vessel::update(0, 0, 0, -90);
+    x = 0;
+    y = 0;
+}
+
+void Vessel::setPos(float _x, float _y, float heading){
+    x = _x;
+    y = _y;
 }
 
 void Vessel::update(int windDir, float speed, int heading, int sailAngle){
     relWindDir = windDir;  // TODO
-    std::cout << "relWindDir: " << relWindDir << "\n";
+    //std::cout << description << "\n";
+    //std::cout << "relWindDir: " << relWindDir << "\n";
 
     float lowLen = 9999999, highLen = -9999999;
     for(auto itSection = sections.begin(); itSection != sections.end(); ++itSection){
@@ -61,7 +69,7 @@ void Sail::update(Mast& mast){
 
 Vessel testBoat(void){
     Vessel returnBoat;
-    returnBoat.description = "Test Boat";
+    returnBoat.description = "Test_Boat";
 
     HullSection s1, s2, s3, s4, s5, s6, s7, s8;
 

@@ -117,6 +117,9 @@ void DebugState::viewBox(ManualObject* manual_lines){
     drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(highX, 10, lowY), Ogre::Vector3(lowX, 10, lowY));
     drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(lowX, 10, lowY), Ogre::Vector3(highX, 10, highY));
     drawLine(manual_lines, ColourValue(0,1,1), Ogre::Vector3(lowX, 10, highY), Ogre::Vector3(highX, 10, lowY));
+
+    boats.front().setPos((lowX + highX) / 2, (lowY + highY) /2, 0.0);
+    displayBoats();
 }
 
 void DebugState::drawUniqueLine(Ogre::ManualObject* mo, Ogre::ColourValue colour, Ogre::Vector3 pointA, Ogre::Vector3 pointB){
@@ -198,28 +201,6 @@ ManualObject* DebugState::addLines(const String name, void(DebugState::*p_functi
     m_pSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual_lines);
 
     return manual_lines;
-}
-
-ManualObject* DebugState::addPlanes(const String name, void(DebugState::*p_function)(ManualObject*)){
-    ManualObject* manual_planes;
-    try{
-        manual_planes = m_pSceneMgr->getManualObject(name);
-        //SceneNode* parent = manual_planes->getParentSceneNode();
-        //parent->detachObject(manual_planes);
-        //m_pSceneMgr->destroySceneNode(parent->getName());
-        manual_planes->clear();
-    } catch (Ogre::Exception ex) {
-        manual_planes = m_pSceneMgr->createManualObject(name);
-        m_pSceneMgr->getRootSceneNode()->createChildSceneNode("boatNode")->attachObject(manual_planes);
-    }
-
-    manual_planes->begin("SolidColour", Ogre::RenderOperation::OT_TRIANGLE_LIST);
-
-    (this->*p_function)(manual_planes);
-
-    manual_planes->end();
-
-    return manual_planes;
 }
 
 void DebugState::addPlanes(const String name, const int recursion, Point bl, Point tr){
@@ -550,15 +531,35 @@ void DebugState::getInput()
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
 void DebugState::displayBoats(){
-    addPlanes("boatPlanes", &DebugState::viewBoatPlanes);
-}
-
-void DebugState::viewBoatPlanes(Ogre::ManualObject* manual_planes){
-
-    int posCount = manual_planes->getCurrentVertexCount();
 
     for(auto it = boats.begin(); it != boats.end(); ++it){
+        cout << "boat: " << it->description << "\t" << it->relWindDir << "\n";
+        ManualObject* manual_planes;
+        int posCount = 0;
+
+        try{
+            manual_planes = m_pSceneMgr->getManualObject(it->description);
+            manual_planes->clear();
+            
+            SceneNode* m_pSceneNode = m_pSceneMgr->getSceneNode("mySceneNode");
+
+            m_pSceneNode->setPosition(it->x, 0, it->y);
+        } catch (Ogre::Exception ex) {
+            manual_planes = m_pSceneMgr->createManualObject(it->description);
+            
+            SceneNode* m_pSceneNode = m_pSceneMgr->getRootSceneNode()->createChildSceneNode("mySceneNode");
+            m_pSceneNode->attachObject(manual_planes);
+            
+            m_pSceneNode->scale(0.001, 0.001, 0.001);
+            m_pSceneNode->setPosition(it->x, 0, it->y);
+        }
+
+        manual_planes->begin("SolidColour", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+
         drawHull(manual_planes, posCount, *it);
+
+        manual_planes->end();
+
     }
 
 }
@@ -592,22 +593,18 @@ void DebugState::update(double timeSinceLastFrame)
         }
     }
 
-    m_MoveScale = m_MoveSpeed   * timeSinceLastFrame * (float)MAP_SIZE / 1000.0;
+    //m_MoveScale = m_MoveSpeed   * timeSinceLastFrame * (float)MAP_SIZE / 1000.0;
+    m_MoveScale = m_MoveSpeed   * timeSinceLastFrame * (float)m_pCamera->getPosition().y / 10.0;
     m_RotScale  = m_RotateSpeed * timeSinceLastFrame;
 
     m_TranslateVector = Vector3::ZERO;
 
     getInput();
     generateScenery();
-    displayBoats();
+    //displayBoats();
     moveCamera();
 }
 
-//struct tile{
-//    int     index;
-//    int     recursion;
-//    int     size;    
-//}
 
 #define MAP_TILES           16
 #define MAP_TILE_SIZE       MAP_SIZE / MAP_TILES
@@ -688,6 +685,9 @@ void DebugState::buildGUI()
         displayModes.push_back("Resolution " + std::to_string(r));
     }
     OgreFramework::getSingletonPtr()->m_pTrayMgr->createLongSelectMenu(OgreBites::TL_TOPRIGHT, "DisplayModeSelMenu", "Display Mode", 200, data.maxRecursion +2, displayModes);
+
+    OgreFramework::getSingletonPtr()->m_pTrayMgr->createThickSlider(OgreBites::TL_TOPRIGHT, "SailAngle", "SailAngle", 200, 80, -90, 90, 181);
+    OgreFramework::getSingletonPtr()->m_pTrayMgr->createThickSlider(OgreBites::TL_TOPRIGHT, "WindDir", "WindDir", 200, 80, 0, 359, 360);
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
@@ -710,6 +710,23 @@ void DebugState::itemSelected(OgreBites::SelectMenu* menu)
             lines->setVisible(true);
             break;
     }
+}
+
+void DebugState::sliderMoved(OgreBites::Slider* slider)
+{
+    static int SailAngle = -90;
+    static int WindDir = 0;
+
+    if(slider->getName() == "SailAngle"){
+        SailAngle = slider->getValue();
+    }
+    else if(slider->getName() == "WindDir"){
+        WindDir = slider->getValue();
+        if(WindDir >= 180) WindDir -= 360;
+    }
+
+    boats.front().update(WindDir, 0, 0, SailAngle);  // TODO: affect selected boat rather than boats.front().
+    displayBoats();
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||

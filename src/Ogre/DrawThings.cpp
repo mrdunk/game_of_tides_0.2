@@ -2,6 +2,7 @@
 
 #include "DrawThings.hpp"
 
+
 void drawHull(Ogre::ManualObject* manual_planes, int& posCount, Vessel& boat){
     
     HullSection* lastSection = &(boat.sections.back());

@@ -12,7 +12,7 @@ using namespace std;
 
 #define SEED_ISLAND 5.0
 #define GROW_ISLAND 18 
-#define MAX_RECURSEION 2
+#define MAX_RECURSEION 3
 
 Point emptyPoint(0, 0);
 vector<Point> emptySet;

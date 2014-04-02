@@ -46,7 +46,8 @@ struct Vessel{
     int                                 windDir;
     int                                 relWindDir;
     float                               speed;
-    int                                 heading;
+    float                               heading;
+    float                               x, y;
 
     std::vector<struct HullSection>     sections;
     std::vector<struct Mast>            masts;
@@ -54,6 +55,7 @@ struct Vessel{
     Ogre::Vector3                       midPoint;
     void                                update(void);
     void                                update(int windDir, float speed, int heading, int sailAngle);    // Update all sails on boat to new AoA.
+    void                                setPos(float _x, float _y, float heading);
 };
 
 Vessel testBoat(void);
