@@ -4,11 +4,16 @@
 #include <OgreSceneNode.h>
 #include <OgreStaticGeometry.h>
 #include <OgreTechnique.h>
+#include <OgreMeshManager.h>
 
 #include "DebugState.hpp"
 #include <utility>      // std::pair, std::make_pair
 #include "../data/boats.h"
 #include "DrawThings.hpp"
+
+
+#define MAP_TILES           32
+#define MAP_TILE_SIZE       MAP_SIZE / MAP_TILES
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -46,6 +51,7 @@ void DebugState::enter()
     //m_pCamera->setPosition(Vector3(5, 60, 60));
     //m_pCamera->lookAt(Vector3(5, 20, 0));
     m_pCamera->setNearClipDistance(0.01);
+    m_pCamera->setFarClipDistance(3* MAP_SIZE);
 
     m_pCamera->setPosition(MAP_SIZE/2, MAP_SIZE, MAP_SIZE/2);
     m_pCamera->lookAt(MAP_SIZE/2, 0, MAP_SIZE/2);
@@ -221,24 +227,31 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
     //TODO: replace corners list with an itterator.
     unordered_set<Point, pairHash> corners = data.cornersInBox(recursion, bl, tr);
 
+    bool land;
     for(auto it = corners.begin(); it != corners.end(); ++it){
-            if(data.find(*it)->second.numCorner(recursion) > 0){
-                if(debugRecursion >= 0){
-                    site = Vector3((float)it->x() / MAP_MIN_RES, (float)(data.find(*it)->second.getHeight() > 0), (float)it->y() / MAP_MIN_RES);
-                } else {
-                    site = Vector3((float)it->x() / MAP_MIN_RES, (float)data.find(*it)->second.getHeight() / MAP_MIN_RES, (float)it->y() / MAP_MIN_RES);
+        if(data.find(*it)->second.numCorner(recursion) > 0){
+            land = true;
+            if(data.find(*it)->second.getHeight() == 0){
+                // Since centre of tile is above 0, check corners too.
+                //land = false;
+                for(auto itCorner = data.find(*it)->second.beginCorner(recursion); itCorner != data.find(*it)->second.endCorner(recursion); ++itCorner){
+                    if(data.find(*itCorner)->second.getHeight() > 0){
+                        // At least one corner is above 0 so treat as land.
+                        land = true;
+                        break;
+                    }
                 }
+            }
+            if(land){
+                site = Vector3((float)it->x() / MAP_MIN_RES, (float)data.find(*it)->second.getHeight() / MAP_MIN_RES, (float)it->y() / MAP_MIN_RES);
+                
                 manual_planes->position(site);
                 manual_planes->colour(landColour(site.y, site.y, 1));
                 manual_planes->normal(0,1,0);
                 cornerCount = 0;
                 for(auto itCorner = data.find(*it)->second.beginCorner(recursion); itCorner != data.find(*it)->second.endCorner(recursion); ++itCorner){
-                    if(debugRecursion >= 0){
-                        corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)(data.find(*itCorner)->second.getHeight() > 0), (float)itCorner->y() / MAP_MIN_RES);
-                    } else {
-                        corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)data.find(*itCorner)->second.getHeight() / MAP_MIN_RES, 
-                                (float)itCorner->y() / MAP_MIN_RES);
-                    }
+                    corner = Vector3((float)itCorner->x() / MAP_MIN_RES, (float)data.find(*itCorner)->second.getHeight() / MAP_MIN_RES, 
+                            (float)itCorner->y() / MAP_MIN_RES);
 
                     // calculate normal for this point.
                     Ogre::Vector3 dir0 = site - corner;
@@ -257,6 +270,7 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
                 manual_planes->triangle(vertexCount, vertexCount +1, vertexCount + cornerCount);
                 vertexCount += cornerCount +1;
             }
+        }
     }
 
     manual_planes->end();
@@ -266,7 +280,8 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
 }
 
 Ogre::ColourValue DebugState::landColour(float siteHeight, float height, float gradient){
-    if(siteHeight == 0){
+    //if(siteHeight == 0){
+    if(height == 0){
         return Ogre::ColourValue(0, 0.2, 0.6);
     }
     float red = height / 8;
@@ -293,6 +308,32 @@ void DebugState::createScene(){
     // Set this so scenery re-generates.
     regenScene = true;
     debugRecursion = -1;
+
+    // sea surface
+    /*
+    for(int x = 0; x < MAP_SIZE; x += MAP_SIZE / MAP_TILES){
+        for(int y = 0; y < MAP_SIZE; y += MAP_SIZE / MAP_TILES){
+
+            std::string name("waterSurface");
+            name += std::to_string(x);
+            name += "_";
+            name += std::to_string(y);
+
+            Ogre::Plane plane(Ogre::Vector3::UNIT_Y, 0);
+
+            Ogre::MeshManager::getSingleton().createPlane(name, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+                    plane, MAP_SIZE/MAP_TILES, MAP_SIZE/MAP_TILES, 20, 20, true, 1, 5, 5, Ogre::Vector3::UNIT_Z);
+
+            Ogre::Entity* entWater = m_pSceneMgr->createEntity(name + "Entity", name);
+            //entWater->setRenderQueueGroup( RENDER_QUEUE_WORLD_GEOMETRY_2 );             // Render sea after land.
+            Ogre::SceneNode* nodeWater = m_pSceneMgr->getRootSceneNode()->createChildSceneNode();
+            nodeWater->attachObject(entWater);
+
+            entWater->setMaterialName("Examples/Rockwall");
+            entWater->setCastShadows(false);
+            nodeWater->setPosition(x + MAP_SIZE/2/MAP_TILES, 0.1, y + MAP_SIZE/2/MAP_TILES);
+        }
+    }*/
 }
 
 void DebugState::initMaterial(void){
@@ -487,6 +528,11 @@ void DebugState::moveCamera()
     if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_LSHIFT))
         m_pCamera->moveRelative(m_TranslateVector);
     m_pCamera->moveRelative(m_TranslateVector / 10);
+    if(m_pCamera->getPosition().y > 10){
+        m_pCamera->setNearClipDistance(m_pCamera->getPosition().y / 2);
+    } else {
+        m_pCamera->setNearClipDistance(0.01);
+    }
 }
 
 //|||||||||||||||||||||||||||||||||||||||||||||||
@@ -550,7 +596,7 @@ void DebugState::displayBoats(){
             SceneNode* m_pSceneNode = m_pSceneMgr->getRootSceneNode()->createChildSceneNode("mySceneNode");
             m_pSceneNode->attachObject(manual_planes);
             
-            m_pSceneNode->scale(0.001, 0.001, 0.001);
+            m_pSceneNode->scale(1.0/MAP_MIN_RES, 1.0/MAP_MIN_RES, 1.0/MAP_MIN_RES);
             m_pSceneNode->setPosition(it->x, 0, it->y);
         }
 
@@ -605,9 +651,6 @@ void DebugState::update(double timeSinceLastFrame)
     moveCamera();
 }
 
-
-#define MAP_TILES           16
-#define MAP_TILE_SIZE       MAP_SIZE / MAP_TILES
 
 void DebugState::generateScenery(){
     //static struct tile tiles[MAP_TILES * MAP_TILES];

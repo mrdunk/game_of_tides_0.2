@@ -24,9 +24,9 @@ using boost::polygon::voronoi_diagram;
 #define MAP_NUM_POINTS  1000//000
 #define MAP_SIZE        1000//000//00
 #define MAP_MIN_RES     1000
-#define AVOID_EDGE      100
+#define AVOID_EDGE      MAP_SIZE / 10
 
-#define RECURSE         3
+//#define RECURSE         4
 
 #define TYPE_SITE       0
 #define TYPE_CORNER     1
@@ -120,6 +120,8 @@ class MapData{
 
         //Point closestTo(const int recursion, Point target);
         Point closestSiteTo(const int recursion, Point target);
+        Point closestSiteTo(const int recursion, Point target, Point hint);
+
         //Point closestCornerTo(const int recursion, Point target);
         std::unordered_set<Point, pairHash> cornersInBox(const int recursion, Point bl, Point tr);
 };

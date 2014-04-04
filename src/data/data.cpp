@@ -12,7 +12,8 @@ using namespace std;
 
 #define SEED_ISLAND 5.0
 #define GROW_ISLAND 18 
-#define MAX_RECURSEION 3
+#define MAX_RECURSEION 4
+#define HEIGHT_MULTIPLIER   MAP_MIN_RES / 5
 
 Point emptyPoint(0, 0);
 vector<Point> emptySet;
@@ -283,7 +284,7 @@ void MapData::setHeights(void){
             working = open1.front();
             open1.pop_front();
             if(count(working) > 0){
-                find(working)->second.setHeight(1.0 + (float)distFromSea * 500.0 / (find(working)->second.minRecursion +1));
+                find(working)->second.setHeight(1.0 + (float)distFromSea * (float)HEIGHT_MULTIPLIER / (find(working)->second.minRecursion +1));
                 for(auto it = find(working)->second.beginSite(maxRecursion); it != find(working)->second.endSite(maxRecursion); ++it){
                     if(closed.count(*it) <= 0){
                         open0.push_back(*it);
@@ -565,9 +566,13 @@ MapType::iterator MapData::end(void){
 }
 
 Point MapData::closestSiteTo(const int recursion, Point target){
+    return closestSiteTo(recursion, target, centre);
+}
+
+Point MapData::closestSiteTo(const int recursion, Point target, Point hint){
     //cout << "MapData::closestSiteTo... " << target.x() << "," << target.y() << "\n";
     Point working = Point(0, 0);
-    Point closest = centre;
+    Point closest = hint;
 
     float a, b;
     long dist, closestDist = (long)MAP_SIZE * (long)MAP_MIN_RES * (long)MAP_SIZE * (long)MAP_MIN_RES;
@@ -585,6 +590,7 @@ Point MapData::closestSiteTo(const int recursion, Point target){
                 }
             }
         }
+        working = Point(0, 0);
     }
     //cout << "...done. " << closest.x() << "," << closest.y() << "\n";
     return closest;
@@ -596,38 +602,85 @@ std::unordered_set<Point, pairHash> MapData::cornersInBox(const int recursion, P
     deque<Point> open;
     unordered_set<Point, pairHash> closed;
     unordered_set<Point, pairHash> retSet;
-    open.push_back(closestSiteTo(recursion, centre));
-    //open.push_back(closestSiteTo(recursion, bl));
-    //open.push_back(closestSiteTo(recursion, tr));
-    //open.push_back(closestSiteTo(recursion, Point(bl.x(), tr.y())));
-    //open.push_back(closestSiteTo(recursion, Point(tr.x(), bl.y())));
-    
+    //open.push_back(closestSiteTo(recursion, centre));
+
+    centre = closestSiteTo(recursion, centre);
+
+    /*if(centre.x() < bl.x() or centre.x() > tr.x() or centre.y() < bl.y() or centre.y() > tr.y()){
+        centre = closestSiteTo(recursion, bl);
+        cout << "a";
+    }
+
+    if(centre.x() < bl.x() or centre.x() > tr.x() or centre.y() < bl.y() or centre.y() > tr.y()){
+        centre = closestSiteTo(recursion, tr);
+        cout << "b";
+    }
+
+    if(centre.x() < bl.x() or centre.x() > tr.x() or centre.y() < bl.y() or centre.y() > tr.y()){
+        centre = closestSiteTo(recursion, Point(bl.x(), tr.y()));
+        cout << "c";
+    }
+
+    if(centre.x() < bl.x() or centre.x() > tr.x() or centre.y() < bl.y() or centre.y() > tr.y()){
+        centre = closestSiteTo(recursion, Point(tr.x(), bl.y()));
+        cout << "d";
+    }*/
+
+    if(centre.x() >= bl.x() and centre.x() <= tr.x() and centre.y() >= bl.y() and centre.y() <= tr.y()){
+        retSet.insert(centre);
+    } 
+    open.push_back(centre);
+
     Point working;
 
     while(open.size() > 0){
         working = open.front();
         open.pop_front();
         for(auto it = find(working)->second.beginSite(recursion); it != find(working)->second.endSite(recursion); ++it){
-            if(it->x() >= bl.x() and it->x() <= tr.x() and it->y() >= bl.y() and it->y() <= tr.y() and closed.count(*it) == 0 and retSet.count(*it) == 0){
-                open.push_back(*it);
-                retSet.insert(*it);
-            } else if(closed.count(*it) == 0 and retSet.count(*it) == 0){
-                // Allow imediate neighbours not in retSet to contribute child sites.
-                if(closed.count(working) == 0){
+            if(closed.count(*it) == 0 and retSet.count(*it) == 0){
+                if(it->x() >= bl.x() and it->x() <= tr.x() and it->y() >= bl.y() and it->y() <= tr.y()){
                     open.push_back(*it);
+                    retSet.insert(*it);
                 }
-                closed.insert(*it);
-            }
-        }
-        for(auto it = find(working)->second.beginCorner(recursion); it != find(working)->second.endCorner(recursion); ++it){
-            // 
-            if(it->x() >= bl.x() and it->x() <= tr.x() and it->y() >= bl.y() and it->y() <= tr.y() and closed.count(*it) == 0){
-                open.push_back(*it);
-                closed.insert(*it);
             }
         }
     }
-    cout << closed.size() << "\t";
+
+    if(retSet.size() == 0){
+        // retSet is still empty so let's try again but including children of neghbouring nodes that are outwith check area.
+        open.push_back(centre);
+
+        while(open.size() > 0){
+            working = open.front();
+            open.pop_front();
+            for(auto it = find(working)->second.beginSite(recursion); it != find(working)->second.endSite(recursion); ++it){
+                if(closed.count(*it) == 0 and retSet.count(*it) == 0){
+                    if(it->x() >= bl.x() and it->x() <= tr.x() and it->y() >= bl.y() and it->y() <= tr.y()){
+                        open.push_back(*it);
+                        retSet.insert(*it);
+                    } else if(working.x() >= bl.x() and working.x() <= tr.x() and working.y() >= bl.y() and working.y() <= tr.y()){
+                        // Allow imediate neighbours not in retSet to contribute child sites.
+                        open.push_back(*it);
+                        closed.insert(*it);
+                    }
+                }
+            }
+            for(auto it = find(working)->second.beginCorner(recursion); it != find(working)->second.endCorner(recursion); ++it){
+                if(closed.count(*it) == 0){
+                    if(it->x() >= bl.x() and it->x() <= tr.x() and it->y() >= bl.y() and it->y() <= tr.y()){
+                        open.push_back(*it);
+                        closed.insert(*it);
+                    } else if(working.x() >= bl.x() and working.x() <= tr.x() and working.y() >= bl.y() and working.y() <= tr.y()){
+                        // Allow imediate neighbours not in retSet to contribute child sites.
+                        open.push_back(*it);
+                        closed.insert(*it);
+                    }
+                }
+            }
+        }
+    }
+
+    cout << retSet.size() << "\t";
     return retSet;
 }
 
