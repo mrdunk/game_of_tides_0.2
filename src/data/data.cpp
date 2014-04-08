@@ -3,6 +3,7 @@
 #include <time.h>
 #include <float.h>
 #include <cmath>        // std::abs
+#include <math.h>       /* sqrt */
 
 #include "data.h"
 
@@ -13,7 +14,7 @@ using namespace std;
 #define SEED_ISLAND 5.0
 #define GROW_ISLAND 18 
 #define MAX_RECURSEION 4
-#define HEIGHT_MULTIPLIER   MAP_MIN_RES / 5
+#define HEIGHT_MULTIPLIER   sqrt(MAP_MIN_RES) *2
 
 Point emptyPoint(0, 0);
 vector<Point> emptySet;
@@ -356,20 +357,20 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
     populateVoronoi(seedPoints, recursion);
     cout << "  Voronoi calculated.\n";
 
-    // Set heights.
+    // Set heights of shorelines.
+    // We try to set as sea any tile that overlaps a sea tile at the previous recursion level.
     // TODO Maybe there is a better place to do this?
     deque<Point> open;
     unordered_set<Point, pairHash> closed;
     Point working;
     for(auto it = begin(); it != end(); ++it){
         if(it->second.type == TYPE_SITE){
-            //if(it->second.minRecursion == recursion -1 and it->second.getHeight(recursion -1) <= 0){
-            for(int r = it->second.minRecursion; r < recursion; ++r){
-                if(it->second.getHeight() <= 0){
+            if(it->second.minRecursion < recursion){        // only interested in parent tiles at lower recursion levels.
+                if(it->second.getHeight() <= 0){            // only interested in parent sea and shore tiles.
                     open.clear();
                     closed.clear();
 
-                    // Check for parent overlap with neghbouring cells.
+                    // Check if latest cells overlap parent's neghbours.
                     for(auto itSite = it->second.beginSite(recursion); itSite != it->second.endSite(recursion); ++itSite){
                         if(find(*itSite)->second.minRecursion == recursion and planesOverlap(recursion -1, it->first, recursion, *itSite)){
                             open.push_back(*itSite);
@@ -390,6 +391,14 @@ void MapData::moreDetail(const int recursion, std::unordered_set<Point, pairHash
                     }
                 }
             }
+        }
+    }
+
+    // Setting outermost shore tiles as sea for final recursion level smooths shorelines.
+    if(recursion == MAX_RECURSEION){
+        shore = getShore(recursion);
+        for(auto itSite = shore.begin(); itSite != shore.end(); ++itSite){
+            find(*itSite)->second.setHeight(0);
         }
     }
     cout << seedPoints.size() << " ...done\n";
@@ -424,7 +433,6 @@ void MapData::raiseLand(void){
         cout << "No natural islands. Using centre point.\n";
         MapContainer[centre].setHeight(1);
     }
-
 
     while(open.size() > 0){
         //cout << "open:   " << open.size() << "\n";

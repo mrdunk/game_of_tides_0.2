@@ -14,7 +14,8 @@
 
 #define MAP_TILES           32
 #define MAP_TILE_SIZE       MAP_SIZE / MAP_TILES
-
+#define WATERLEVEL          10.0 / MAP_MIN_RES
+#define VISIBILITY          0.2
 //|||||||||||||||||||||||||||||||||||||||||||||||
 
 using namespace Ogre;
@@ -50,12 +51,11 @@ void DebugState::enter()
     m_pCamera = m_pSceneMgr->createCamera("GameCamera");
     //m_pCamera->setPosition(Vector3(5, 60, 60));
     //m_pCamera->lookAt(Vector3(5, 20, 0));
-    m_pCamera->setNearClipDistance(0.01);
-    m_pCamera->setFarClipDistance(3* MAP_SIZE);
+    m_pCamera->setNearClipDistance(MAP_SIZE * 0.75);
+    m_pCamera->setFarClipDistance(2 * MAP_SIZE);
 
     m_pCamera->setPosition(MAP_SIZE/2, MAP_SIZE, MAP_SIZE/2);
     m_pCamera->lookAt(MAP_SIZE/2, 0, MAP_SIZE/2);
-    m_pCamera->setFarClipDistance(MAP_SIZE*4);
 
     Ogre::Quaternion rot1;
     rot1.FromAngleAxis(Ogre::Degree(-90), Ogre::Vector3::UNIT_X);
@@ -72,6 +72,12 @@ void DebugState::enter()
     OgreFramework::getSingletonPtr()->m_pViewport->setCamera(m_pCamera);
     m_pCurrentObject = 0;
 
+    Ogre::ColourValue fadeColour(0.9, 0.9, 0.9);
+    OgreFramework::getSingletonPtr()->m_pViewport->setBackgroundColour(fadeColour);
+    //m_pSceneMgr->setFog(Ogre::FOG_LINEAR, fadeColour, 0.0, 0, 250);
+    //m_pSceneMgr->setFog(Ogre::FOG_EXP, fadeColour, 0.005);
+    //m_pSceneMgr->setFog(Ogre::FOG_EXP2, fadeColour, 0.003);
+    
     buildGUI();
 
     boats.push_back(testBoat());
@@ -233,7 +239,7 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
             land = true;
             if(data.find(*it)->second.getHeight() == 0){
                 // Since centre of tile is above 0, check corners too.
-                //land = false;
+                land = false;
                 for(auto itCorner = data.find(*it)->second.beginCorner(recursion); itCorner != data.find(*it)->second.endCorner(recursion); ++itCorner){
                     if(data.find(*itCorner)->second.getHeight() > 0){
                         // At least one corner is above 0 so treat as land.
@@ -281,11 +287,11 @@ void DebugState::addPlanes(const String name, const int recursion, Point bl, Poi
 
 Ogre::ColourValue DebugState::landColour(float siteHeight, float height, float gradient){
     //if(siteHeight == 0){
-    if(height == 0){
-        return Ogre::ColourValue(0, 0.2, 0.6);
-    }
-    float red = height / 8;
-    float green = 0.8 / (height +1);
+    //if(height == 0){
+    //    return Ogre::ColourValue(0, 0.2, 0.6);
+    //}
+    float red = height *4;
+    float green = 0.8 / (height *4 +1);
     float blue = 1 - gradient;
     return Ogre::ColourValue(red, green, blue);
 }
@@ -310,7 +316,6 @@ void DebugState::createScene(){
     debugRecursion = -1;
 
     // sea surface
-    /*
     for(int x = 0; x < MAP_SIZE; x += MAP_SIZE / MAP_TILES){
         for(int y = 0; y < MAP_SIZE; y += MAP_SIZE / MAP_TILES){
 
@@ -331,9 +336,9 @@ void DebugState::createScene(){
 
             entWater->setMaterialName("Examples/Rockwall");
             entWater->setCastShadows(false);
-            nodeWater->setPosition(x + MAP_SIZE/2/MAP_TILES, 0.1, y + MAP_SIZE/2/MAP_TILES);
+            nodeWater->setPosition(x + MAP_SIZE/2/MAP_TILES, WATERLEVEL, y + MAP_SIZE/2/MAP_TILES);
         }
-    }*/
+    }
 }
 
 void DebugState::initMaterial(void){
@@ -525,13 +530,25 @@ bool DebugState::mouseReleased(const OIS::MouseEvent &evt, OIS::MouseButtonID id
 
 void DebugState::moveCamera()
 {
+    static Ogre::ColourValue fadeColour(0.9, 0.9, 0.9);
     if(OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_LSHIFT))
         m_pCamera->moveRelative(m_TranslateVector);
     m_pCamera->moveRelative(m_TranslateVector / 10);
-    if(m_pCamera->getPosition().y > 10){
+
+    if(m_pCamera->getPosition().y > MAP_SIZE / 2){
+        m_pCamera->setFarClipDistance(2 * MAP_SIZE);
         m_pCamera->setNearClipDistance(m_pCamera->getPosition().y / 2);
+        m_pSceneMgr->setFog(Ogre::FOG_EXP, fadeColour, 0);
+    } else if(m_pCamera->getPosition().y > 1){
+        m_pCamera->setNearClipDistance(m_pCamera->getPosition().y / 2);
+        m_pCamera->setFarClipDistance(MAP_SIZE);
+        m_pSceneMgr->setFog(Ogre::FOG_EXP, fadeColour, VISIBILITY / m_pCamera->getPosition().y);
     } else {
-        m_pCamera->setNearClipDistance(0.01);
+        float height = m_pCamera->getPosition().y - WATERLEVEL;
+        if(height < 0.01) height = 0.01;
+        m_pCamera->setNearClipDistance(height / 5);
+        m_pCamera->setFarClipDistance(MAP_SIZE / height);
+        m_pSceneMgr->setFog(Ogre::FOG_EXP, fadeColour, VISIBILITY);
     }
 }
 
@@ -589,7 +606,7 @@ void DebugState::displayBoats(){
             
             SceneNode* m_pSceneNode = m_pSceneMgr->getSceneNode("mySceneNode");
 
-            m_pSceneNode->setPosition(it->x, 0, it->y);
+            m_pSceneNode->setPosition(it->x, WATERLEVEL, it->y);
         } catch (Ogre::Exception ex) {
             manual_planes = m_pSceneMgr->createManualObject(it->description);
             
@@ -597,7 +614,7 @@ void DebugState::displayBoats(){
             m_pSceneNode->attachObject(manual_planes);
             
             m_pSceneNode->scale(1.0/MAP_MIN_RES, 1.0/MAP_MIN_RES, 1.0/MAP_MIN_RES);
-            m_pSceneNode->setPosition(it->x, 0, it->y);
+            m_pSceneNode->setPosition(it->x, WATERLEVEL, it->y);
         }
 
         manual_planes->begin("SolidColour", Ogre::RenderOperation::OT_TRIANGLE_LIST);
